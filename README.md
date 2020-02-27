@@ -7,3 +7,4 @@ Kuhn poker is a simplified game of poker where each player is given one card fro
 
 Implementation Timeline of Pluribus
 ===================================
+* Implement Kuhn Poker
