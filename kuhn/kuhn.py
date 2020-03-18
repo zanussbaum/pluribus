@@ -38,7 +38,8 @@ class Kuhn:
                     self.folded_players.add(curr_player)
                 if raised_actions[-1] == 'call':
                     self.pot += 1
-
+            else:
+                raised_actions.append('out')
             i += 1
 
         return raised_actions
@@ -55,27 +56,29 @@ class Kuhn:
             if self.verbose:
                 print("current round: {}".format(r))
             for i in range(len(players)):
-                if len(self.folded_players) == self.num_players - 1:
-                        if self.verbose:
-                            print("player {} won {} chips. Everyone else folded".format(i, self.pot))
-                            print(current_round)
-                        return
-                curr_action = players[i].action()
-                current_round.append(curr_action)
-                try:
-                    did_raise = current_round[-1] == 'raise'
-                    did_fold = current_round[-1] == 'fold'
-                    
-                    if did_fold:
-                        self.folded_players.add(i)
-                    
-                except:
-                    did_raise = False
-                if did_raise:
-                    self.pot += 1
-                    current_round.append(self._raised(i))
-                    break
-            
+                if i not in self.folded_players:
+                    if len(self.folded_players) == self.num_players - 1:
+                            if self.verbose:
+                                print("player {} won {} chips. Everyone else folded".format(i, self.pot))
+                                print(current_round)
+                            return
+                    curr_action = players[i].action()
+                    current_round.append(curr_action)
+                    try:
+                        did_raise = current_round[-1] == 'raise'
+                        did_fold = current_round[-1] == 'fold'
+                        
+                        if did_fold:
+                            self.folded_players.add(i)
+                        
+                    except:
+                        did_raise = False
+                    if did_raise:
+                        self.pot += 1
+                        current_round.append(self._raised(i))
+                        break
+                else:
+                    current_round.append('out')
             actions.append(current_round)
             if len(self.folded_players) == self.num_players - 1:
                         if self.verbose:
@@ -88,7 +91,7 @@ class Kuhn:
         return actions
         
     def _showdown(self):
-        still_playing = [player for player in players if player.player_number not in self.folded_players]
+        still_playing = [player for player in self.players if player.player_number not in self.folded_players]
         winner = max(still_playing)
         if self.verbose:
             print(still_playing)
@@ -158,9 +161,9 @@ class ExtendedKuhn(Kuhn):
 
 
 if __name__ == '__main__':
-    # Kuhn(1, 5, verbose=True).play()
+    Kuhn(1, 5, verbose=True).play()
 
-    ExtendedKuhn(2, 10, verbose=True).play()
+    # ExtendedKuhn(2, 10, verbose=True).play()
 
 
 
