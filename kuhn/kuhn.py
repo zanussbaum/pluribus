@@ -24,7 +24,7 @@ class Kuhn:
 
             print("the leftover cards are {}".format(self.leftover))
 
-    def _raised(self, player):
+    def _raised(self, player, last_bet=1, last_raiser=None):
         i = 1
         players = self.players
         raised_actions = []
@@ -37,7 +37,11 @@ class Kuhn:
                 if raised_actions[-1] == 'fold':
                     self.folded_players.add(curr_player)
                 if raised_actions[-1] == 'call':
-                    self.pot += 1
+                    if last_raiser == curr_player:
+                        bet = last_bet - 1
+                    else:
+                        bet = last_bet
+                    self.pot += bet
             else:
                 raised_actions.append('out')
             i += 1
@@ -54,7 +58,7 @@ class Kuhn:
         for r in range(self.betting_rounds):
             current_round = []
             if self.verbose:
-                print("current round: {}".format(r))
+                print("current round: {} chips: {}".format(r, self.pot))
             for i in range(len(players)):
                 if i not in self.folded_players:
                     if len(self.folded_players) == self.num_players - 1:
@@ -75,7 +79,7 @@ class Kuhn:
                         did_raise = False
                     if did_raise:
                         self.pot += 1
-                        current_round.append(self._raised(i))
+                        current_round.append(self._raised(i, 1))
                         break
                 else:
                     current_round.append('out')
@@ -98,9 +102,11 @@ class Kuhn:
             print("the winner is {}. They won {} chips".format(winner, self.pot))
 
     def play(self):
+        self.pot += self.num_players
         if self.verbose:
             print('Staring game, each player antes 1')
-        self.pot += self.num_players
+            print('The pot is {}'.format(self.pot))
+        
 
         self._deal()
         actions = self._play_hand()
@@ -128,7 +134,7 @@ class ExtendedKuhn(Kuhn):
             print("the leftover cards are {}".format(self.leftover))
             print("the common card is {}".format(self.common_card))
 
-    def _raised(self, player):
+    def _raised(self, player, last_bet=1, last_raiser=None):
         i = 1
         players = self.players
         raised_actions = []
@@ -141,10 +147,10 @@ class ExtendedKuhn(Kuhn):
                 if raised_actions[-1] == 'fold':
                     self.folded_players.add(curr_player)
                 if raised_actions[-1] == 'call':
-                    self.pot += 1
+                    self.pot += last_bet
                 if raised_actions[-1] == 'raise':
-                    self.pot += 2
-                    actions = super()._raised(curr_player)
+                    self.pot += last_bet + 1
+                    actions = super()._raised(curr_player, 2, player)
                     raised_actions.append(actions)
                     return raised_actions
             i += 1
@@ -152,18 +158,34 @@ class ExtendedKuhn(Kuhn):
         return raised_actions
 
     def _showdown(self):
-        """
-        Implement how private and public card are 
-        """
-        pass
+        still_playing = [player for player in self.players if player.player_number not in self.folded_players]
+
+        for player in still_playing:
+            if player.card == self.common_card:
+                print("player {} won with a pair! They won {} chips".format(player, self.pot))
+                return
+
+        high_card_player = max(still_playing)
+
+
+        ties = sum(player.card == high_card_player.card for player in still_playing)
+
+        if ties > 1:
+            winners = [p for p in still_playing if p.card == high_card_player.card]
+
+            print('there was a tie. {} and {} split the pot of {}'.format(winners[0], winners[1], self.pot))
+
+
+        print("player {} won with high card. They won {} chips".format(high_card_player, self.pot))
+
 
         
 
 
 if __name__ == '__main__':
-    Kuhn(1, 5, verbose=True).play()
+    # Kuhn(1, 5, verbose=True).play()
 
-    # ExtendedKuhn(2, 10, verbose=True).play()
+    ExtendedKuhn(2, 10, verbose=True).play()
 
 
 
