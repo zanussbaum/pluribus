@@ -23,10 +23,16 @@ class Player:
                 try:
                     if extended:
                         action = int(input('Player: {} Fold (0) Call (2) or Bet (3) ? '.format(self.player_number)))
+                        if action in [0, 2, 3]:
+                            valid = True
+                        else:
+                            raise ValueError
                     else:
                         action = int(input('Player: {} Fold (0) or Call (2)? '.format(self.player_number)))
-                    if isinstance(action, int):
-                        valid = True
+                        if action in [0, 2]:
+                            valid = True
+                        else:
+                            raise ValueError
                 except KeyboardInterrupt:
                     sys.exit()
                 except:
@@ -36,8 +42,10 @@ class Player:
             while not valid:
                 try:
                     action = int(input("Player: {} Fold (0) Check (1) or Bet (3)? ".format(self.player_number)))
-                    if isinstance(action, int):
+                    if action in [0, 1, 3]:
                             valid = True
+                    else:
+                        raise ValueError
                 except KeyboardInterrupt:
                     sys.exit()
                     
