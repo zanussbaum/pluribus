@@ -15,13 +15,16 @@ class Player:
     def win(self, amount):
         self.chips += amount
 
-    def action(self, raised=False):
+    def action(self, raised=False, extended=False):
         valid = False
         if raised:
             
             while not valid:
                 try:
-                    action = int(input('Player: {} Fold (0) or Call (2)? '.format(self.player_number)))
+                    if extended:
+                        action = int(input('Player: {} Fold (0) Call (2) or Bet (3) ? '.format(self.player_number)))
+                    else:
+                        action = int(input('Player: {} Fold (0) or Call (2)? '.format(self.player_number)))
                     if isinstance(action, int):
                         valid = True
                 except KeyboardInterrupt:
