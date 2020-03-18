@@ -10,6 +10,12 @@ class Kuhn:
         self.verbose = verbose
         self.betting_rounds = betting_rounds
         self.num_cards = num_cards
+        self.mapping = {'fold': [1, -1, -1, -1], 
+                        'check': [-1, 1, -1, -1], 
+                        'call': [-1, -1, 1, -1], 
+                        'raise': [-1, -1, -1, 1],
+                        'out': [0, 0, 0, 0]
+                    }
 
     def _deal(self):
         cards = np.random.choice(self.num_cards, self.num_players, replace=False)
@@ -110,8 +116,31 @@ class Kuhn:
 
         self._deal()
         actions = self._play_hand()
-
         self._showdown()
+
+        for player in self.players:
+            print(self.represent(actions, player.card, player.player_number))
+
+    def represent(self, actions, card, player_number):
+        representation = []
+
+        for r in actions:
+            for action in r:
+                if isinstance(action, list):
+                    for response in action:
+                        mapping = self.mapping[response]
+                        representation.append(mapping)
+                else:
+                    mapping = self.mapping[action]
+                    representation.append(mapping)
+
+        representation = np.array(representation).reshape(-1)
+        size = representation.shape[0]
+        flattened = np.zeros(22)
+        flattened[:size] = representation
+        flattened[-2] = player_number
+        flattened[-1] = card
+        return flattened
 
 
 class ExtendedKuhn(Kuhn):
@@ -183,9 +212,8 @@ class ExtendedKuhn(Kuhn):
 
 
 if __name__ == '__main__':
-    # Kuhn(1, 5, verbose=True).play()
-
-    ExtendedKuhn(2, 10, verbose=True).play()
+    Kuhn(1, 5, verbose=True).play()
+    # ExtendedKuhn(2, 10, verbose=True).play()
 
 
 
