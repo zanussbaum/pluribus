@@ -1,93 +1,108 @@
 import numpy as np
 from player import Player
-from copy import deepcopy
 
     
 class Kuhn:
-    def __init__(self, **args):
+    def __init__(self, betting_rounds, verbose=False, **args):
         self.pot = 0
         self.num_players = 3
         self.players = [Player(i) for i in range(self.num_players)]
+        self.verbose = verbose
+        self.betting_rounds = betting_rounds
 
-    def deal(self, verbose=False):
+    def __deal(self):
         cards = np.random.choice(5, 3, replace=False)
         for i in range(self.num_players):
             self.players[i].get_card(cards[i])
 
         self.leftover = set([i for i in range(5)]) - set(cards)
 
-        if verbose:
+        if self.verbose:
             for player in range(self.num_players):
                 print("player {} has card {}".format(player, cards[player]))
 
             print("the leftover cards are {}".format(self.leftover))
 
-    def __folded(self, actions, players):
-        folded = np.where(actions==0)[0]
-        for out in folded[::-1]:
-            players.pop(out)
-
-    def __raised(self, actions, raiser, players):
-        #make sure that the raiser stays in the game
-        actions[players.index(raiser)] = 1
-        for i, player in enumerate(players):
-            if player != raiser and actions[i] != 0:
-                actions[i] = self.players[player].action(raised=True)
-                if actions[i]:
+    def __raised(self, player):
+        i = 1
+        players = self.players
+        raised_actions = []
+        while i < self.num_players:
+            curr_player = (player + self.num_players + i) % self.num_players
+            if len(self.folded_players) == self.num_players - 1:
+                return raised_actions
+            if curr_player not in self.folded_players:
+                raised_actions.append(players[curr_player].action(True))
+                if raised_actions[-1] == 'fold':
+                    self.folded_players.add(curr_player)
+                if raised_actions[-1] == 'call':
                     self.pot += 1
 
-        self.__folded(actions, players)
+            i += 1
 
-    def __showdown(self, players):
-        if len(players) == 1:
-            print("everyone else folded\nplayer {} wins {} chips".format(players[0], self.pot))
-            self.players[players[0]].win(self.pot)
-            return
-        winner = self.players[max(players, key=lambda k: self.players[k])]
-        print("player {} won with card {}".format(winner.player_number, winner.card))
-        print("they won {} chips".format(self.pot))
+        return raised_actions
 
-        winner.win(self.pot)
-
-    def __betting_round(self, players):
-        folded = np.array([0 for i in range(len(players))])
-        actions = np.array([None for i in range(len(players))])
-        for i, player in enumerate(players):
-            actions[i] = self.players[player].action()
-            if not actions[i]:
-                folded[i] = True
-                if sum(folded) == 2:
-                    player = np.where(folded == 0)[0][0]
-                    print("everyone else folded\nplayer {} wins {} chips".format(player, self.pot))
-                    players = []
-                    return
-            elif actions[i] == 2:
-                self.pot += 1
-                self.__raised(actions, player, players)
-                self.__showdown(players)
-                return
-
-        # if everyone calls, less than two people fold, or some combination
-        # remove the people that have folded
-        self.__folded(actions, players)
-        self.__showdown(players)
                 
-    def play_hand(self):
-        players = [i for i in range(self.num_players)]
-        self.__betting_round(players)
+    def __play_hand(self):
+        players = self.players 
 
+        actions = []
+        self.folded_players = set()
+
+        for _ in range(self.betting_rounds):
+            current_round = []
+            for i in range(len(players)):
+                if len(self.folded_players) == self.num_players - 1:
+                        if self.verbose:
+                            print("player {} won {} chips. Everyone else folded".format(i, self.pot))
+                            print(current_round)
+                        return
+                curr_action = players[i].action()
+                current_round.append(curr_action)
+                try:
+                    did_raise = current_round[-1] == 'raise'
+                    did_fold = current_round[-1] == 'fold'
+                    
+                    if did_fold:
+                        self.folded_players.add(i)
+                    
+                except:
+                    did_raise = False
+                if did_raise:
+                    self.pot += 1
+                    current_round.append(self.__raised(i))
+                    break
+            
+            actions.append(current_round)
+            if len(self.folded_players) == self.num_players - 1:
+                        if self.verbose:
+                            print("player {} won {} chips. Everyone else folded".format(set([0,1,2]) - self.folded_players, self.pot))
+                            print(actions)
+                        return
+
+
+        still_playing = [player for player in players if player.player_number not in self.folded_players]
+        winner = max(still_playing)
+        if self.verbose:
+            print(actions)
+            print(still_playing)
+            print("the winner is {}. They won {} chips".format(winner, self.pot))
+
+        return actions
+        
+            
 
     def play(self):
-        print('Staring game, each player antes 1')
+        if self.verbose:
+            print('Staring game, each player antes 1')
         self.pot += self.num_players
-        print(self.pot)
 
-        self.deal(verbose=True)
-        self.play_hand()
+        self.__deal()
+        self.__play_hand()
 
 
 if __name__ == '__main__':
-    Kuhn().play()
+    Kuhn(1, verbose=True).play()
 
 
 
