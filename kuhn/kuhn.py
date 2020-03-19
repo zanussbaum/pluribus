@@ -30,7 +30,7 @@ class Kuhn:
 
             print("the leftover cards are {}".format(self.leftover))
 
-    def _raised(self, player, last_bet=1, last_raiser=None):
+    def _raised(self, player, last_bet=1):
         i = 1
         players = self.players
         raised_actions = []
@@ -43,10 +43,12 @@ class Kuhn:
                 if raised_actions[-1] == 'fold':
                     self.folded_players.add(curr_player)
                 if raised_actions[-1] == 'call':
-                    if last_raiser == curr_player:
+                    if curr_player in self.raised_players or curr_player in self.called_players:
                         bet = last_bet - 1
                     else:
                         bet = last_bet
+                        self.called_players.add(curr_player)
+                    
                     self.pot += bet
             else:
                 raised_actions.append('out')
@@ -60,7 +62,8 @@ class Kuhn:
 
         actions = []
         self.folded_players = set()
-
+        self.raised_players = set()
+        self.called_players = set()
         for r in range(self.betting_rounds):
             current_round = []
             if self.verbose:
@@ -85,6 +88,7 @@ class Kuhn:
                         did_raise = False
                     if did_raise:
                         self.pot += 1
+                        self.raised_players.add(i)
                         current_round.append(self._raised(i, 1))
                         break
                 else:
@@ -118,8 +122,7 @@ class Kuhn:
         actions = self._play_hand()
         self._showdown()
 
-        for player in self.players:
-            print(self.represent(actions, player.card, player.player_number))
+
 
     def represent(self, actions, card, player_number):
         representation = []
@@ -177,9 +180,11 @@ class ExtendedKuhn(Kuhn):
                     self.folded_players.add(curr_player)
                 if raised_actions[-1] == 'call':
                     self.pot += last_bet
+                    self.called_players.add(curr_player)
                 if raised_actions[-1] == 'raise':
                     self.pot += last_bet + 1
-                    actions = super()._raised(curr_player, 2, player)
+                    self.raised_players.add(curr_player)
+                    actions = super()._raised(curr_player, 2)
                     raised_actions.append(actions)
                     return raised_actions
             i += 1
@@ -206,6 +211,7 @@ class ExtendedKuhn(Kuhn):
 
 
         print("player {} won with high card. They won {} chips".format(high_card_player, self.pot))
+
 
 
         
