@@ -122,7 +122,8 @@ class Kuhn:
         actions = self._play_hand()
         self._showdown()
 
-
+        for player in self.players:
+            print(self.represent(actions, player.card, player.player_number))
 
     def represent(self, actions, card, player_number):
         representation = []
@@ -139,8 +140,9 @@ class Kuhn:
 
         representation = np.array(representation).reshape(-1)
         size = representation.shape[0]
-        flattened = np.zeros(22)
+        flattened = np.zeros(23)
         flattened[:size] = representation
+        flattened[-3] = self.pot
         flattened[-2] = player_number
         flattened[-1] = card
         return flattened
@@ -212,14 +214,46 @@ class ExtendedKuhn(Kuhn):
 
         print("player {} won with high card. They won {} chips".format(high_card_player, self.pot))
 
+    def represent(self, actions, card, player_number):
+        rounds = []
+
+        for r in actions:
+            curr_round = []
+            for action in r:
+                if isinstance(action, list):
+                    for response in action:
+                        if isinstance(response, list):
+                            for raised in response:
+                                mapping = self.mapping[raised]
+                                curr_round.append(mapping)
+                        else:
+                            mapping = self.mapping[response]
+                            curr_round.append(mapping)
+                else:
+                    mapping = self.mapping[action]
+                    curr_round.append(mapping)
+            rounds.append(np.array(curr_round).flatten())
+        
+        first_round_length = len(rounds[0])
+        second_round_length = len(rounds[1])
+
+        max_betting_length = 28
+
+        flattened = np.zeros(59)
+        flattened[:first_round_length] = rounds[0]
+        flattened[max_betting_length:max_betting_length+second_round_length] = rounds[1]
+        flattened[-3] = self.pot
+        flattened[-2] = player_number
+        flattened[-1] = card
+        return flattened
 
 
         
 
 
 if __name__ == '__main__':
-    Kuhn(1, 5, verbose=True).play()
-    # ExtendedKuhn(2, 10, verbose=True).play()
+    # Kuhn(1, 5, verbose=True).play()
+    ExtendedKuhn(2, 10, verbose=True).play()
 
 
 
