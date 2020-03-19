@@ -1,7 +1,7 @@
 import numpy as np
 from player import Player
 
-    
+ 
 class Kuhn:
     def __init__(self, betting_rounds, num_cards, verbose=False,**args):
         self.pot = 0
@@ -62,10 +62,11 @@ class Kuhn:
 
         actions = []
         self.folded_players = set()
-        self.raised_players = set()
-        self.called_players = set()
+        
         for r in range(self.betting_rounds):
             current_round = []
+            self.raised_players = set()
+            self.called_players = set()
             if self.verbose:
                 print("current round: {} chips: {}".format(r, self.pot))
             for i in range(len(players)):
@@ -142,7 +143,7 @@ class Kuhn:
         size = representation.shape[0]
         flattened = np.zeros(23)
         flattened[:size] = representation
-        flattened[-3] = self.pot
+        flattened[-3] = self.pot / 6
         flattened[-2] = player_number
         flattened[-1] = card
         return flattened
@@ -242,7 +243,7 @@ class ExtendedKuhn(Kuhn):
         flattened = np.zeros(59)
         flattened[:first_round_length] = rounds[0]
         flattened[max_betting_length:max_betting_length+second_round_length] = rounds[1]
-        flattened[-3] = self.pot
+        flattened[-3] = self.pot / 15
         flattened[-2] = player_number
         flattened[-1] = card
         return flattened
