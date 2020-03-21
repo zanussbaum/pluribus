@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_namespace_packages
 
 setup(name='pluribus',
       version='0.1',
@@ -6,5 +6,5 @@ setup(name='pluribus',
       url='https://github.com/zanussbaum/pluribus',
       author='zanussbaum',
       license='MIT',
-      packages=['pluribus'],
+      packages=find_namespace_packages(include=["pluribus.*"]),
       zip_safe=False)
