@@ -1,5 +1,5 @@
 import numpy as np
-from player import Player
+from player import BasePlayer as Player
 
  
 class Kuhn:
@@ -15,7 +15,7 @@ class Kuhn:
                         'call': [-1, -1, 1, -1], 
                         'raise': [-1, -1, -1, 1],
                         'out': [0, 0, 0, 0]
-                    }
+                    } 
 
     def _deal(self):
         cards = np.random.choice(self.num_cards, self.num_players, replace=False)

@@ -1,6 +1,6 @@
 import sys
 
-class Player:
+class BasePlayer:
     def __init__(self, player_number):
         self.player_number = player_number
         self.chips = 10
@@ -58,3 +58,22 @@ class Player:
 
     def __repr__(self):
         return 'Player: {} Card: {}'.format(self.player_number, self.card)
+
+class Agent(BasePlayer):
+    def __init__(self, player_number, num_chips=None, num_actions=2):
+        super().__init__(player_number)
+        if num_chips is None:
+            self.chips = 2
+        else:
+            self.chips = num_chips
+
+    def bet(self, amount):
+        self.betting += amount
+        self.chips -= amount
+
+    def end_game(self, amount_won=None):
+        if amount_won is not None:
+            self.chips += amount_won + self.betting 
+            self.betting = 0
+        else:
+            self.betting = 0
