@@ -1,5 +1,5 @@
 import numpy as np
-from pluribus.kuhn.player import Agent as Player
+import random
 
 class RegretMin:
     def __init__(self, num_actions, utilities, opponent_strategy):
@@ -71,11 +71,13 @@ class Node(RegretMin):
 
         return self.strategy
 
+    def __repr__(self):
+        return 'info: {} strategy: {} regret: {}'.format(self.info_set, self.strategy, self.regret_sum)
+
 class VanillaCFR:
     def __init__(self, num_players, num_actions, terminal, actions=None):
         self.num_players = num_players
         self.num_actions = num_actions
-        self.players = [Player(i) for i in range(num_players)]
         if actions is None:
             self.actions = [i for i in range(num_actions)]
         else:
@@ -86,53 +88,58 @@ class VanillaCFR:
 
     def train(self, cards, iterations):
         util = 0
-        probabilities = np.ones(self.num_players)
         for i in range(iterations):
-
-            util += cfr(0, np.random.choice(cards), "", probabilities)
+            np.random.shuffle(cards)
+            probabilities = np.ones(self.num_players)
+            util += self.cfr(0, cards, "", probabilities)
 
         print('average game value {}'.format(util/iterations))
-
-    def payoff(self, curr_player):
-        winner = max(self.players)
-
-        pot = 0
-        for player in self.players:
-            if player != winner:
-                pot += player.betting
-                
-        winner.end_game(pot)
-
-
-        return pot if curr_player == winner.player_number else curr_player.betting * -1
+        
+        for key in sorted(self.node_map.keys(), key=len):
+            node = self.node_map[key]
+            strategy = node.get_avg_strategy()
+            print("{}: P: {} B: {}".format(key, strategy[0], strategy[1]))
+        
+    def payoff(self, curr_player, history, cards):
+        winner = np.argmax(cards[:self.num_players])
+        if history == "PBP":
+            return -1 if curr_player == 0 else 1
+        elif history == "BP":
+            return 1 if curr_player == 0 else -1
+        m = 1 if winner == curr_player else -1
+        if history == "PP":
+            return m
+        if history in ["BB", "PBB"]:
+            return m*2
 
     
     def cfr(self, player, cards, history, probability):
         plays = len(history)
         
         if history in self.terminal:
-            utility = self.payoff(player)
+            utility = self.payoff(player, history, cards)
             return utility
 
-        info_set = cards[player] + history
+        info_set = str(cards[player]) + history
 
         node = self.node_map.setdefault(info_set, 
-                            Node(info_set, self.actions))
+                            Node(info_set, self.num_actions))
 
         strategy = node.get_strategy(probability[player])
         utilities = np.zeros(self.num_actions)
         next_player = (player + 1) % self.num_players
 
         node_util = 0
-        for action in self.actions:
-            next_history = history.append(action)
-            probability[player] *= strategy[action] 
-            utilities[action] = self.cfr(next_player, cards, next_history, probability)
-            node_util += strategy[action] * utilities[action]
+        for i, action in enumerate(self.actions):
+            next_history = history + action
+            probability[player] *= strategy[i] 
+            utilities[i] = self.cfr(next_player, cards, next_history, probability)
+            node_util += strategy[i] * utilities[i]
 
-        for action in self.actions:
-            regret = utilities[action] - node_util
-            node.regret_sum[action] += regret * probability[player]
+        for i, action in enumerate(self.actions):
+            regret = utilities[i] - node_util
+            node.regret_sum[i] += regret * probability[next_player]
+
 
         return node_util
 
@@ -148,12 +155,12 @@ if __name__ == '__main__':
 
     # kuhn poker 2 player 
     # 2 actions
-    HANDS = [(1,2), (1,3), (2,1), (2,3), (3,1), (3,2)]
+    cards = [i for i in range(3)]
     ACTIONS = ['P', 'B']
-    TERMINAL = ['PP', 'BB', 'PBP', 'PBB', 'BP']
+    TERMINAL = ["PP", "PBP", "PBB", "BP", "BB"]
 
     kuhn_regret = VanillaCFR(2, 2, TERMINAL, ACTIONS)
 
-    kuhn_regret.train(HANDS, 100)
+    kuhn_regret.train(cards, 10000)
 
             
