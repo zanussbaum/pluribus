@@ -90,12 +90,11 @@ class VanillaCFR:
         util = 0
         for i in range(iterations):
             np.random.shuffle(cards)
-            probabilities = np.ones(self.num_players)
-            util += self.cfr(0, cards, "", probabilities)
+            util += self.cfr(0, cards, "", 1, 1)
 
         print('average game value {}'.format(util/iterations))
         
-        for key in sorted(self.node_map.keys(), key=len):
+        for key in sorted(self.node_map.keys(), key=lambda x: (len(x), x)):
             node = self.node_map[key]
             strategy = node.get_avg_strategy()
             print("{}: P: {} B: {}".format(key, strategy[0], strategy[1]))
@@ -113,7 +112,7 @@ class VanillaCFR:
             return m*2
 
     
-    def cfr(self, player, cards, history, probability):
+    def cfr(self, player, cards, history, pi1, pi2):
         plays = len(history)
         
         if history in self.terminal:
@@ -125,20 +124,22 @@ class VanillaCFR:
         node = self.node_map.setdefault(info_set, 
                             Node(info_set, self.num_actions))
 
-        strategy = node.get_strategy(probability[player])
+        prob = pi1 if player == 0 else pi2
+        strategy = node.get_strategy(prob)
         utilities = np.zeros(self.num_actions)
         next_player = (player + 1) % self.num_players
 
         node_util = 0
         for i, action in enumerate(self.actions):
             next_history = history + action
-            probability[player] *= strategy[i] 
-            utilities[i] = self.cfr(next_player, cards, next_history, probability)
+            utilities[i] = -1 * self.cfr(next_player, cards, next_history, pi1 * strategy[i], pi2) if player == 0 else \
+                -1 * self.cfr(next_player, cards, next_history, pi1, pi2 * strategy[i])
             node_util += strategy[i] * utilities[i]
 
+        next_prob = pi1 if next_player == 0 else pi2
         for i, action in enumerate(self.actions):
             regret = utilities[i] - node_util
-            node.regret_sum[i] += regret * probability[next_player]
+            node.regret_sum[i] += regret * next_prob
 
 
         return node_util
@@ -161,6 +162,6 @@ if __name__ == '__main__':
 
     kuhn_regret = VanillaCFR(2, 2, TERMINAL, ACTIONS)
 
-    kuhn_regret.train(cards, 10000)
+    kuhn_regret.train(cards, 100000)
 
             
