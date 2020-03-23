@@ -90,14 +90,15 @@ class VanillaCFR:
         util = 0
         for i in range(iterations):
             np.random.shuffle(cards)
-            util += self.cfr(0, cards, "", 1, 1)
+            prob = tuple(np.ones(self.num_players))
+            util += self.cfr(0, cards, "", prob)
 
         print('average game value {}'.format(util/iterations))
-        
+        print('information set:\tstrategy:\t')
         for key in sorted(self.node_map.keys(), key=lambda x: (len(x), x)):
             node = self.node_map[key]
             strategy = node.get_avg_strategy()
-            print("{}: P: {} B: {}".format(key, strategy[0], strategy[1]))
+            print("{}:\t P: {} B: {}".format(key, strategy[0], strategy[1]))
         
     def payoff(self, curr_player, history, cards):
         winner = np.argmax(cards[:self.num_players])
@@ -112,7 +113,7 @@ class VanillaCFR:
             return m*2
 
     
-    def cfr(self, player, cards, history, pi1, pi2):
+    def cfr(self, player, cards, history, probability):
         plays = len(history)
         
         if history in self.terminal:
@@ -124,22 +125,20 @@ class VanillaCFR:
         node = self.node_map.setdefault(info_set, 
                             Node(info_set, self.num_actions))
 
-        prob = pi1 if player == 0 else pi2
-        strategy = node.get_strategy(prob)
+        strategy = node.get_strategy(probability[player])
         utilities = np.zeros(self.num_actions)
         next_player = (player + 1) % self.num_players
 
         node_util = 0
         for i, action in enumerate(self.actions):
             next_history = history + action
-            utilities[i] = -1 * self.cfr(next_player, cards, next_history, pi1 * strategy[i], pi2) if player == 0 else \
-                -1 * self.cfr(next_player, cards, next_history, pi1, pi2 * strategy[i])
+            new_prob = tuple(prob if j != player else prob * strategy[i] for j, prob in enumerate(probability))
+            utilities[i] = -1 * self.cfr(next_player, cards, next_history, new_prob)
             node_util += strategy[i] * utilities[i]
 
-        next_prob = pi1 if next_player == 0 else pi2
         for i, action in enumerate(self.actions):
             regret = utilities[i] - node_util
-            node.regret_sum[i] += regret * next_prob
+            node.regret_sum[i] += regret * probability[next_player]
 
 
         return node_util
@@ -156,7 +155,7 @@ if __name__ == '__main__':
 
     # kuhn poker 2 player 
     # 2 actions
-    cards = [i for i in range(3)]
+    cards = [i for i in range(1, 4)]
     ACTIONS = ['P', 'B']
     TERMINAL = ["PP", "PBP", "PBB", "BP", "BB"]
 
