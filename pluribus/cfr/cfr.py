@@ -84,7 +84,7 @@ class VanillaCFR:
         else:
             self.actions = kwargs['actions']
         if 'payoff' in kwargs:
-            self.payoff = kwargs['payoff']
+            self.__custom_payoff = kwargs['payoff']
 
         self.terminal = terminal
         self.node_map = {}
@@ -102,8 +102,9 @@ class VanillaCFR:
             node = self.node_map[key]
             strategy = node.get_avg_strategy()
             print("{}:\t P: {} B: {}".format(key, strategy[0], strategy[1]))
-        
-    def payoff(self, curr_player, history, cards):
+
+
+    def __payoff(self, curr_player, history, cards):
         winner = np.argmax(cards[:self.num_players])
         if history == "PBP":
             return -1 if curr_player == 0 else 1
@@ -114,6 +115,13 @@ class VanillaCFR:
             return m
         if history in ["BB", "PBB"]:
             return m*2
+
+    
+    def payoff(self, curr_player, history, cards):
+        try:
+            return self.__custom_payoff(self, curr_player, history, cards)
+        except:
+            return self.__payoff(curr_player, history, cards)
 
     
     def cfr(self, player, cards, history, probability):
@@ -139,10 +147,14 @@ class VanillaCFR:
             utilities[i] = -1 * self.cfr(next_player, cards, next_history, new_prob)
             node_util += strategy[i] * utilities[i]
 
+        opp_prob = 1
+        for i, prob in enumerate(probability):
+            if i != player:
+                opp_prob *= prob
+            
         for i, action in enumerate(self.actions):
             regret = utilities[i] - node_util
-            node.regret_sum[i] += regret * probability[next_player]
-
+            node.regret_sum[i] += regret * opp_prob
 
         return node_util
 
@@ -158,15 +170,48 @@ if __name__ == '__main__':
 
     # kuhn poker 2 player 
     # 2 actions
-    cards = [i for i in range(1, 4)]
-    ACTIONS = ['P', 'B']
-    TERMINAL = ["PP", "PBP", "PBB", "BP", "BB"]
+    # cards = [i for i in range(1, 4)]
+    # ACTIONS = ['P', 'B']
+    # TERMINAL = ["PP", "PBP", "PBB", "BP", "BB"]
 
-    kuhn_regret = VanillaCFR(2, 2, TERMINAL, actions=ACTIONS)
+    # kuhn_regret = VanillaCFR(2, 2, TERMINAL, actions=ACTIONS)
 
-    kuhn_regret.train(cards, 100000)
+    # kuhn_regret.train(cards, 100000)
 
     # kuhn poker 3 player
-    #
+
+    cards = np.array([i for i in range(1, 5)])
+    ACTIONS = ['P', 'B']
+    TERMINAL = ["PPP", "BPP", "PBPP", "PBPB", "PPBPP", "BBP", "BPB", "BBB", "PBBP", "PBBB", "PPBBB", "PPBBP", "PPBPB"]
+
+    def payoff(self, curr_player, history, cards):
+        outstanding_bet = history.find('B')
+
+        if outstanding_bet != -1:
+            actions_after = history[outstanding_bet:]
+            num_folds = actions_after.count('P')
+            num_bets = history.count('B')
+            if num_folds == self.num_players  - 1:
+                return 1 if curr_player == outstanding_bet else - 1
+
+            
+            left = [(pos+outstanding_bet)%self.num_players for pos, char in enumerate(history[outstanding_bet:]) if char != 'P']
+            winner = np.argwhere(cards == max(cards[:self.num_players][left])).item()
+
+            pot = self.num_players + num_bets
+            player_bet = sum([1 if action == 'B' else 0 for action in history[curr_player::3]]) + 1
+
+            return pot - player_bet if curr_player == winner else -player_bet
+            
+
+        winner = np.argmax(cards[:self.num_players])
+
+        return 1 if winner == curr_player else -1 
+
+    three_kuhn = VanillaCFR(3, 2, terminal=TERMINAL, actions=ACTIONS, payoff=payoff)
+
+    three_kuhn.train(cards, 10000)
+
+
 
             
