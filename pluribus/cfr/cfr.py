@@ -75,13 +75,16 @@ class Node(RegretMin):
         return 'info: {} strategy: {} regret: {}'.format(self.info_set, self.strategy, self.regret_sum)
 
 class VanillaCFR:
-    def __init__(self, num_players, num_actions, terminal, actions=None):
+    def __init__(self, num_players, num_actions, terminal, **kwargs):
         self.num_players = num_players
         self.num_actions = num_actions
-        if actions is None:
+        
+        if 'actions' not in kwargs:
             self.actions = [i for i in range(num_actions)]
         else:
-            self.actions = actions
+            self.actions = kwargs['actions']
+        if 'payoff' in kwargs:
+            self.payoff = kwargs['payoff']
 
         self.terminal = terminal
         self.node_map = {}
@@ -159,8 +162,11 @@ if __name__ == '__main__':
     ACTIONS = ['P', 'B']
     TERMINAL = ["PP", "PBP", "PBB", "BP", "BB"]
 
-    kuhn_regret = VanillaCFR(2, 2, TERMINAL, ACTIONS)
+    kuhn_regret = VanillaCFR(2, 2, TERMINAL, actions=ACTIONS)
 
     kuhn_regret.train(cards, 100000)
+
+    # kuhn poker 3 player
+    #
 
             
