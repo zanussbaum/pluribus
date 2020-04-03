@@ -135,7 +135,7 @@ class Node(RegretMin):
         self.strategy = np.zeros(num_actions)
         self.strategy_sum = np.zeros(num_actions)
 
-    def get_strategy(self, weight):
+    def get_strategy(self, weight=1):
         """Calculates the new strategy based on regrets
 
         Gets the current strategy through regret matching
@@ -159,6 +159,9 @@ class Node(RegretMin):
     def __repr__(self):
         return 'info: {} strategy: {} regret: {}'.format(self.info_set, self.strategy, self.regret_sum)
 
+    def __eq__(self, value):
+        return self.info_set == value.info_set
+
 class VanillaCFR:
     """An object to run Vanilla Counterfactual regret on Kuhn poker, or other games
 
@@ -178,7 +181,7 @@ class VanillaCFR:
         terminal: a list of strings of the terminal states in the game
         node_map: a dictionary of nodes of each information set
     """
-    def __init__(self, num_players, num_actions, terminal, **kwargs):
+    def __init__(self, num_players, num_actions, **kwargs):
         """Initializes the Vanilla CFR
 
         Creates the object with specified number of players, actions
@@ -200,7 +203,7 @@ class VanillaCFR:
         if 'payoff' in kwargs:
             self.__custom_payoff = kwargs['payoff']
 
-        self.terminal = terminal
+        self.terminal = kwargs['terminal']
         self.node_map = {}
 
     def train(self, cards, iterations):
@@ -213,14 +216,15 @@ class VanillaCFR:
             cards: array-like of ints denoting each card
             iterations: int for number of iterations to run
         """
-        util = 0
+        player_utils = np.zeros(self.num_players)
         for _ in range(iterations):
+            if _ % 1000 == 0:
+                print("Iteration {}/{}".format(_, iterations))
             np.random.shuffle(cards)
             prob = tuple(np.ones(self.num_players))
-            calc_util = self.cfr(0, cards, "", prob)
-            util += calc_util[0]
+            player_utils += self.cfr(0, cards, "", prob)
 
-        print('average game value {}'.format(util/iterations))
+        print('expected utility per player {}'.format(player_utils/iterations))
         print('information set:\tstrategy:\t')
         for key in sorted(self.node_map.keys(), key=lambda x: (len(x), x)):
             node = self.node_map[key]
@@ -292,7 +296,7 @@ class VanillaCFR:
         """    
         if history in self.terminal:
             utility = self.payoff(history, cards)
-            return utility
+            return np.array(utility)
 
         info_set = str(cards[player]) + history
 
@@ -303,13 +307,14 @@ class VanillaCFR:
         utilities = np.zeros(self.num_actions)
         next_player = (player + 1) % self.num_players
 
-        node_util = 0
+        node_util = np.zeros(self.num_players)
         for i, action in enumerate(self.actions):
             next_history = history + action
             new_prob = tuple(prob if j != player else prob * strategy[i] for j, prob in enumerate(probability))
             returned_util = self.cfr(next_player, cards, next_history, new_prob)
             utilities[i] = returned_util[player]
-            node_util += strategy[i] * utilities[i]
+            node_util += returned_util * strategy[i]
+           
 
         opp_prob = 1
         for i, prob in enumerate(probability):
@@ -317,16 +322,17 @@ class VanillaCFR:
                 opp_prob *= prob
             
         for i, action in enumerate(self.actions):
-            regret = utilities[i] - node_util
+            regret = utilities[i] - node_util[player]
             node.regret_sum[i] += regret * opp_prob
 
-        return [-1 * node_util if i != player else node_util for i in range(self.num_players)]
+        return node_util
 
 
+        
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Counterfactual Regret Minimization')
-    parser.add_argument('-i', '--iterations', default=10000, type=int, help='number of iterations to run for.')
-    parser.add_argument('-c','--cfr', default=1, type=int, help='(0) Run regret min or Run CFR for (1): 2 players or (2): 3 players')
+    parser.add_argument('-i', '--iterations', type=int, help='number of iterations to run for.')
+    parser.add_argument('-c','--cfr', type=int, help='(0) Run regret min or Run CFR for (1): 2 players or (2): 3 players')
 
     args = parser.parse_args()
 
@@ -343,7 +349,7 @@ if __name__ == '__main__':
         ACTIONS = ['P', 'B']
         TERMINAL = ["PP", "PBP", "PBB", "BP", "BB"]
 
-        kuhn_regret = VanillaCFR(2, 2, TERMINAL, actions=ACTIONS)
+        kuhn_regret = VanillaCFR(2, 2, terminal=TERMINAL, actions=ACTIONS)
 
         kuhn_regret.train(cards, args.iterations)
     elif args.cfr == 2:
@@ -384,6 +390,9 @@ if __name__ == '__main__':
         three_kuhn = VanillaCFR(3, 2, terminal=TERMINAL, actions=ACTIONS, payoff=payoff)
 
         three_kuhn.train(cards, args.iterations)
+        
+    else:
+        parser.print_help()
 
 
 
