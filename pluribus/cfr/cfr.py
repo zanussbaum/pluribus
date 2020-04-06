@@ -328,12 +328,241 @@ class VanillaCFR:
         return node_util
 
 
+class InfoSet(Node):
+    """Actions: [Fold Pass Call Raise]
+    Infoset denoted by cards | actions?
+    """
+    def __init__(self, info_set, num_actions, player, is_turn):
+        super().__init__(info_set, num_actions)
+        self.player = player
+        self.is_turn = is_turn
+
+
+class MonteCarloCFR(VanillaCFR):
+    """Representing history by strings 
+    \n represents a new round
+    """
+    
+    def __init__(self, num_players, num_actions, num_betting_rounds, num_raises, **kwargs):
+            super().__init__(num_players, num_actions, **kwargs)
+            self.num_betting_rounds = num_betting_rounds
+            self.num_raises = num_raises
+            self.regret_minimum = -300000000
+            self.strategy_interval = 100000
+            self.prune_threshold = 200
+            self.discount_interval = 10
+            self.lcfr_threshold = 400
+            self.action_mapping = {'P':0, 'B':1}
+            self.reverse_mapping = {0:'P', 1:'B'}
+
+    def train(self, cards, iterations):
+        player_expected_values = np.zeros(self.num_players)
+        for t in range(1, iterations+1):
+            if t % 1000 == 0:
+                print('Iteration {}/{}'.format(t, iterations))
+            np.random.shuffle(cards)
+            for player in range(self.num_players):
+                if t % self.strategy_interval == 0:
+                    self.update_strategy('', player)
+                if t > self.prune_threshold:
+                    will_prune = np.random.random()
+                    if will_prune < .05:
+                        player_expected_values += self.mccfr(cards, '', player)
+                    else:
+                        player_expected_values += self.mccfr(cards, '', player, prune=True)
+                else:
+                    player_expected_values += self.mccfr(cards, '', player)
+
+            if t < self.lcfr_threshold and t % self.discount_interval == 0:
+                discount = (t/self.discount_interval)/(t/self.discount_interval+ 1)
+                for player in range(self.num_players):
+                    player_nodes = self.node_map[player]
+                    for node in player_nodes.values():
+                        node.regret_sum *= discount
+                        node.strategy_sum *= discount
+
+        for player in range(self.num_players):
+            print("expected utility for player {}: {}".format(
+                player, player_expected_values[player]/iterations))
+            player_info_sets = self.node_map[player]
+            print('information set:\tstrategy:\t')
+            for key in sorted(player_info_sets.keys(), key=lambda x: (len(x), x)):
+                node = player_info_sets[key]
+                strategy = node.get_avg_strategy()
+                print("{}:\t P: {} B: {}".format(key, strategy[0], strategy[1]))
+            
+
+    def mccfr(self, cards, history, player, prune=False):
+        if history in self.terminal:
+            utility = self.payoff(history, cards)
+            return np.array(utility)
+
+        #TODOwhat do we do here?
+        # elif self.is_not_in(history, player):
+        #     next_history = history + '-'
+        #     return self.mccfr(cards, next_history, player)
+
+        # elif self.is_chance(history):
+        #     next_history = history + '\n'
+        #     #TODO sample cards to deal, then traverse
+        #     return self.mccfr(cards, next_history, player)
+
+        elif self.is_players_turn(history, player):
+            info_set = str(cards[player]) + '|' + history
+            player_nodes = self.node_map.setdefault(player, {})
+            node = player_nodes.setdefault(info_set, InfoSet(info_set, self.num_actions, player, True))
+
+            strategy = node.get_strategy()
+            valid_actions = self.get_valid_actions(history)
+
+            expected_value = np.zeros(self.num_players)
+            utilities = np.zeros(self.num_actions)
+            if prune:
+                explored = set()
+
+            for action in valid_actions:
+                mapping = self.action_mapping[action]
+                if prune:
+                    if node.regret_sum[mapping] > self.regret_minimum:
+                        next_history = next_history = history + action
+                        calculated_util  = self.mccfr(cards, next_history, player)
+                        utilities[mapping] = calculated_util[player]
+                        expected_value += calculated_util * strategy[mapping]
+                        explored.add(action)
+                else:
+                    next_history = history + action
+                    calculated_util  = self.mccfr(cards, next_history, player)
+                    utilities[mapping] = calculated_util[player]
+                    expected_value += calculated_util * strategy[mapping]
+            
+            for action in valid_actions:
+                mapping = self.action_mapping[action]
+                if prune:
+                    if action in explored:
+                        regret = utilities[mapping] - expected_value[player]
+                        node.regret_sum[mapping] += regret
+                else:
+                    regret = utilities[mapping] - expected_value[player]
+                    node.regret_sum[mapping] += regret
+
+            return expected_value
+
+        else:
+            info_set = str(cards[player]) + '|' + history
+            curr_player = self.which_player(history)
+            player_nodes = self.node_map.setdefault(curr_player, {})
+            node = player_nodes.setdefault(info_set, InfoSet(info_set, self.num_actions, curr_player, True))
+
+            strategy = node.get_strategy()
+            choice = np.random.choice(self.num_actions, p=strategy)
+            action = self.reverse_mapping[choice]
+            next_history = history + action
+            return self.mccfr(cards, next_history, player)
+
+
+    def update_strategy(self, history, player):
+        betting_round = history.rfind('\n')
+        if history in self.terminal or betting_round != -1:
+            return
+
+        elif self.is_players_turn(history, player):
+            info_set = str(cards[player]) + '|' + history
+            player_nodes = self.node_map.setdefault(player, {})
+            node = player_nodes.setdefault(info_set, InfoSet(info_set, self.num_actions, player, True))
+
+            strategy = node.get_strategy()
+            choice = np.random.choice(self.num_actions, p=strategy)
+            node.strategy_sum[choice] += 1
+            action = self.reverse_mapping[choice]
+            next_history = history + action
+            return self.update_strategy(next_history, player)
+
+        else:
+            valid_actions = self.get_valid_actions(history)
+            for action in valid_actions:
+                next_history = history + action
+                return self.update_strategy(next_history, player)
+
+
+    def get_valid_actions(self, history):
+        current_round = history.rfind('\n')
+        outstanding_bet = history[current_round:].find('R')
+
+        if outstanding_bet != -1:
+            if history[current_round:].count('R') > self.num_raises:
+                return ['P', 'B']
+            return ['P', 'B']
+        return ['P', 'B']
+
+    
+    def is_players_turn(self, history, player):
+        num_rounds = history.count('\n')
+        hist_len = len(history) - num_rounds
+        
+        return hist_len % self.num_players == player
+
+    def which_player(self, history):
+        num_rounds = history.count('\n')
+        hist_len = len(history) - num_rounds
+        
+        return hist_len % self.num_players
+        
+
+    def is_not_in(self, history, player):
+        actions_per_round = history.split('\n')
+        player_actions = set()
+        
+        for each_round in actions_per_round:
+            for action in each_round[player::self.num_players]:
+                player_actions.add(action)
+
+
+        return True if 'F' in player_actions else False
+
+    def is_terminal(self, history):
+        #TODO fix this
+        if self.is_chance(history):
+            rounds = history.count('\n') + 1
+            # if you're in the last betting round
+            if rounds == self.num_betting_rounds:
+                start = history.rfind('\n')
+                start = start if start != -1 else 0
+                folded = history[start+1:].count('-') + history[start:].count('F')
+                # if everyone's folded but one player
+                if folded == self.num_players - 1:
+                    return True
+                return False
+            return False
+        
+        return False
+        
+
+    def is_chance(self, history):
+        #TODO double check this
+        current_round = history.rfind('\n')
+        start = current_round if current_round != -1 else 0
+        if history[start:].count('P') == self.num_players:
+            return True
+
+        
+        outstanding_bet = history[start+1:].rfind('B')
+        if outstanding_bet != -1:
+            did_call = history[outstanding_bet+1:].count('B')
+            # if everyone else folded or called after the bet 
+            folded = history[start+1:].count('P')
+            if did_call + folded == self.num_players - 1:
+                return True
+            return False
+
+        return False
+
+
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Counterfactual Regret Minimization')
     parser.add_argument('-i', '--iterations', type=int, help='number of iterations to run for.')
     parser.add_argument('-c','--cfr', type=int, help='(0) Run regret min or Run CFR for (1): 2 players or (2): 3 players')
-
+    parser.add_argument('-m', '--mccfr', type=int, help='(1) Run MCCFR for two player kuhn poker or (2) 3 players')
     args = parser.parse_args()
 
     if args.cfr == 0: 
@@ -390,6 +619,15 @@ if __name__ == '__main__':
         three_kuhn = VanillaCFR(3, 2, terminal=TERMINAL, actions=ACTIONS, payoff=payoff)
 
         three_kuhn.train(cards, args.iterations)
+
+    elif args.mccfr == 1:
+        cards = [i for i in range(1, 4)]
+        ACTIONS = ['P', 'B']
+        TERMINAL = ["PP", "PBP", "PBB", "BP", "BB"]
+
+        mccfr = MonteCarloCFR(2, 2, 1, 1, terminal=TERMINAL, actions=ACTIONS)
+
+        mccfr.train(cards, args.iterations)
         
     else:
         parser.print_help()
