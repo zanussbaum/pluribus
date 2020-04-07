@@ -342,8 +342,6 @@ class VanillaCFR:
         each action by each player. This only works for 2 player Kuhn
         poker currently
 
-        TODO: Check to see if this works for 3player
-
         Args:
             cards: array_like of ints of cards, where each 
                 index corresponds to a player
