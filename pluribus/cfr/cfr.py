@@ -352,7 +352,7 @@ class VanillaCFR:
             array_like: floats that correspond to each players expected
                 utility
         """
-        all_combos = set(permutations(cards))
+        all_combos = [np.array(t) for t in set(permutations(cards))]
 
         expected_utility = np.zeros(self.num_players)
         for card in all_combos:
@@ -775,7 +775,7 @@ if __name__ == '__main__':
                 utilities = [0 for i in range(self.num_players)]
                 pot = self.num_players + num_bets
                 
-                for i in  range(self.num_players):
+                for i in range(self.num_players):
                     utilities[i] = -(sum([1 if action == 'B' else 0 for action in history[i::3]]) + 1)
 
                 if num_folds == self.num_players  - 1:
