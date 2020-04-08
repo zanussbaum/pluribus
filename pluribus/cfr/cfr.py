@@ -731,6 +731,33 @@ class MonteCarloCFR(VanillaCFR):
         return False
 
 
+def three_player_payoff(self, history, cards):
+    outstanding_bet = history.find('B')
+
+    if outstanding_bet != -1:
+        actions_after = history[outstanding_bet:]
+        num_folds = actions_after.count('P')
+        num_bets = history.count('B')
+
+        utilities = [0 for i in range(self.num_players)]
+        pot = self.num_players + num_bets
+        
+        for i in range(self.num_players):
+            utilities[i] = -(sum([1 if action == 'B' else 0 for action in history[i::3]]) + 1)
+
+        if num_folds == self.num_players  - 1:
+            utilities[outstanding_bet] += pot
+            return utilities
+
+        left = [(pos+outstanding_bet)%self.num_players for pos, char in enumerate(history[outstanding_bet:]) if char != 'P']
+        winner = np.argwhere(cards == max(cards[:self.num_players][left])).item()
+        utilities[winner] += pot
+        
+        return utilities
+        
+    winner = np.argmax(cards[:self.num_players])
+
+    return [-1 if i != winner else 2 for i in range(self.num_players)]
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Counterfactual Regret Minimization')
@@ -762,35 +789,8 @@ if __name__ == '__main__':
                 "PBPB", "PBBP", "PBBB", "BPP", "BPB", "BBP", "BBB"
             ]
 
-        def payoff(self, history, cards):
-            outstanding_bet = history.find('B')
 
-            if outstanding_bet != -1:
-                actions_after = history[outstanding_bet:]
-                num_folds = actions_after.count('P')
-                num_bets = history.count('B')
-
-                utilities = [0 for i in range(self.num_players)]
-                pot = self.num_players + num_bets
-                
-                for i in range(self.num_players):
-                    utilities[i] = -(sum([1 if action == 'B' else 0 for action in history[i::3]]) + 1)
-
-                if num_folds == self.num_players  - 1:
-                    utilities[outstanding_bet] += pot
-                    return utilities
-
-                left = [(pos+outstanding_bet)%self.num_players for pos, char in enumerate(history[outstanding_bet:]) if char != 'P']
-                winner = np.argwhere(cards == max(cards[:self.num_players][left])).item()
-                utilities[winner] += pot
-                
-                return utilities
-                
-            winner = np.argmax(cards[:self.num_players])
-
-            return [-1 if i != winner else 2 for i in range(self.num_players)]
-
-        three_kuhn = VanillaCFR(3, 2, terminal=TERMINAL, actions=ACTIONS, payoff=payoff)
+        three_kuhn = VanillaCFR(3, 2, terminal=TERMINAL, actions=ACTIONS, payoff=three_player_payoff)
 
         three_kuhn.train(cards, args.iterations)
 
@@ -804,7 +804,15 @@ if __name__ == '__main__':
         mccfr.train(cards, args.iterations)
 
     elif args.mccfr == 2:
-        raise NotImplementedError('Not yet implemented for 3 player kuhn poker')
+        cards = np.array([i for i in range(1, 5)])
+        ACTIONS = ['P', 'B']
+        TERMINAL = ["PPP", "PPBPP", "PPBPB", "PPBBP", "PPBBB", "PBPP",
+                "PBPB", "PBBP", "PBBB", "BPP", "BPB", "BBP", "BBB"
+            ]
+
+        mccfr = MonteCarloCFR(3, 2, 1, 1, terminal=TERMINAL, actions=ACTIONS, payoff=three_player_payoff)
+
+        mccfr.train(cards, args.iterations)
         
     else:
         parser.print_help()
