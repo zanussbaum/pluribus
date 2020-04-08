@@ -7,18 +7,16 @@ Kuhn poker is a simplified game of poker where each player is given one card fro
 
 Implementation Timeline of Pluribus
 ===================================
-* Implement Kuhn Poker (done)
-* Implement Poker Abstraction
-    * Action Abstraction
-        * What are the different situations? Talks about there being between 1 and 14 different bets it considers
-    * Information Abstraction
-        * Treat similar hands with the same strategy
-        * How do we determine what hands are similar? By card? By win probability?
-* Monte Carlo Counterfactual Regret Minimization
+- [X] Implement Kuhn Poker 
+- [ ] Monte Carlo Counterfactual Regret Minimization
     * Samples action in game tree rather than traversing entire game tree
     * One player is traverser on each iteration
     * Linear CFR in early iterations
-* Depth Limited Search
+    - [x] Two player Kuhn MCCFR
+    -  [ ] Three player Kuhn MCCFR
+    - [ ] Three player multi-round MCCFR
+
+- [ ] Depth Limited Search
     * Plays blueprint strategy in the first betting round
         * Doesn't need to use informal abstraction since the number of decision points are small
     * After the first betting round, real time search is conducted
@@ -26,3 +24,11 @@ Implementation Timeline of Pluribus
         * How did they calculate these different modifications?  
     * Use MCCFR like before if early in the game or subgame is large
     * Else, use vector-based form of Linear CFR
+
+- [ ] Implement Poker Abstraction
+    * Action Abstraction
+        * What are the different situations? Talks about there being between 1 and 14 different bets it considers
+    * Information Abstraction
+        * Treat similar hands with the same strategy
+        * How do we determine what hands are similar? By card? By win probability? 
+
