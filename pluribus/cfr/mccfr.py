@@ -51,6 +51,8 @@ class MonteCarloCFR(VanillaCFR):
         self.lcfr_threshold = 400
         self.action_mapping = {'F':0, 'P': 1, 'C':2, 'R':3}
         self.reverse_mapping = {0:'F', 1:'P', 2:'C', 3:'R'}
+        if 'payoff' in kwargs:
+            self.__custom_payoff = kwargs['payoff']
         
     def payoff(self, history, cards):
         """Main function that calls the payoff function
@@ -160,16 +162,16 @@ class MonteCarloCFR(VanillaCFR):
             utility = self.payoff(history, cards)
             return np.array(utility)
 
-        #TODO what do we do here?
-        elif self.is_not_in(history, player):
-            next_history = history + '-'
-            return self.mccfr(cards, next_history, player)
-
+        # if self.is_not_in(history, player):
+        #     next_history = history + '-'
+        #     return self.mccfr(cards, next_history, player)
+        #why is this not converging like before
         # elif self.is_chance(history):
         #     next_history = history + '\n'
         #     #TODO sample cards to deal, then traverse
         #     return self.mccfr(cards, next_history, player)
         elif curr_player == player:
+           
             info_set = str(cards[player]) + '|' + history
             player_nodes = self.node_map.setdefault(player, {})
             node = player_nodes.setdefault(info_set, InfoSet(info_set, self.num_actions, player))
@@ -214,7 +216,8 @@ class MonteCarloCFR(VanillaCFR):
             player_nodes = self.node_map.setdefault(curr_player, {})
             node = player_nodes.setdefault(info_set, InfoSet(info_set, self.num_actions, curr_player))
 
-            mappings = [self.action_mapping[key] for key in self.get_valid_actions(history)]
+            actions = self.get_valid_actions(history)
+            mappings = [self.action_mapping[key] for key in actions]
             valid_actions = [True if key in mappings else False for key in range(self.num_actions)]
             strategy = node.get_strategy(np.array(valid_actions))
             choice = np.random.choice(self.num_actions, p=strategy)
@@ -245,7 +248,8 @@ class MonteCarloCFR(VanillaCFR):
             player_nodes = self.node_map.setdefault(player, {})
             node = player_nodes.setdefault(info_set, InfoSet(info_set, self.num_actions, player))
 
-            mappings = [self.action_mapping[key] for key in self.get_valid_actions(history)]
+            actions = self.get_valid_actions(history)
+            mappings = [self.action_mapping[key] for key in actions]
             valid_actions = [True if key in mappings else False for key in range(self.num_actions)]
             strategy = node.get_strategy(np.array(valid_actions))
             choice = np.random.choice(self.num_actions, p=strategy)
@@ -313,7 +317,8 @@ class MonteCarloCFR(VanillaCFR):
         strategy = node.get_avg_strategy()
         next_player = (player + 1) % self.num_players
         util = np.zeros(self.num_players)
-        mappings = [self.action_mapping[key] for key in self.get_valid_actions(history)]
+        actions = self.get_valid_actions(history)
+        mappings = [self.action_mapping[key] for key in actions]
         valid_actions = [True if key in mappings else False for key in range(self.num_actions)]
         for i, valid in enumerate(valid_actions):
             if valid:
@@ -372,7 +377,7 @@ class MonteCarloCFR(VanillaCFR):
         last_round = end if end != -1 else 0
 
         current_round = history[last_round:]
-        num_folded = current_round.count('F') + current_round.count('-')
+        num_folded = current_round.count('F')
 
         if num_folded == self.num_players - 1:
             return True

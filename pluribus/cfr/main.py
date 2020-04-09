@@ -34,6 +34,49 @@ def three_player_payoff(self, history, cards):
     return [-1 if i != winner else 2 for i in range(self.num_players)]
 
 
+def three_player_mccfr(self, history, cards):
+    if len(history) == 2:
+        return [-1, -1, 2]
+
+    outstanding_bet = history.find('R')
+    if outstanding_bet == -1:
+        num_folds = history.count('F')
+        if num_folds == self.num_players - 1:
+            still_in = [i for i, char in enumerate(history) if char != 'F'][0]
+            utilities = [-1, -1, -1,]
+            utilities[still_in] = 2
+            return utilities
+        left = [pos for pos, char in enumerate(history) if char != 'F']
+        winner = np.argwhere(cards == max(cards[:self.num_players][left])).item()
+        return [-1 if i != winner else 2 for i in range(self.num_players)]
+
+
+    num_bets = history[outstanding_bet:].count('R') + history[outstanding_bet:].count('C')
+    num_folds = history.count('F')
+
+    utilities = [0 for i in range(self.num_players)]
+    pot = self.num_players + num_bets
+    
+    for i in range(self.num_players):
+        utilities[i] = -(sum([1 if action == 'R' or action =='C' else 0 for action in history[i::3]]) + 1)
+
+    if num_folds == self.num_players  - 1:
+        utilities[outstanding_bet] += pot
+        return utilities
+
+    if len(history) == self.num_players:
+        left = [pos for pos, char in enumerate(history) if char != 'F']
+    else:
+        #this probably isn't right
+        left = [(pos+outstanding_bet)%self.num_players 
+                for pos, char in enumerate(history[outstanding_bet:]) if char != 'F' and char !='-']
+    winner = np.argwhere(cards == max(cards[:self.num_players][left])).item()
+
+    utilities[winner] += pot
+
+    return utilities
+
+
 parser = argparse.ArgumentParser(description='Counterfactual Regret Minimization')
 parser.add_argument('-i', '--iterations', type=int, help='number of iterations to run for.')
 parser.add_argument('-c','--cfr', type=int, help='(0) Run regret min or Run CFR for (1): 2 players or (2): 3 players')
@@ -72,21 +115,15 @@ elif args.cfr == 2:
 
 elif args.mccfr == 1:
     cards = [i for i in range(1, 4)]
-    ACTIONS = ['P', 'B']
-    TERMINAL = ["PP", "PBP", "PBB", "BP", "BB"]
 
-    mccfr = MonteCarloCFR(2, 4, args.rounds, args.raises, terminal=TERMINAL, actions=ACTIONS)
+    mccfr = MonteCarloCFR(2, 4, args.rounds, args.raises)
 
     mccfr.train(cards, args.iterations)
 
 elif args.mccfr == 2:
     cards = np.array([i for i in range(1, 5)])
-    ACTIONS = ['P', 'B']
-    TERMINAL = ["PPP", "PPBPP", "PPBPB", "PPBBP", "PPBBB", "PBPP",
-            "PBPB", "PBBP", "PBBB", "BPP", "BPB", "BBP", "BBB"
-        ]
 
-    mccfr = MonteCarloCFR(3, 4, args.rounds, args.raises, terminal=TERMINAL, actions=ACTIONS, payoff=three_player_payoff)
+    mccfr = MonteCarloCFR(3, 4, args.rounds, args.raises, payoff=three_player_mccfr)
 
     mccfr.train(cards, args.iterations)
     

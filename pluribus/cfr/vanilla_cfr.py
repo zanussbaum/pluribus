@@ -43,7 +43,8 @@ class VanillaCFR:
         if 'payoff' in kwargs:
             self.__custom_payoff = kwargs['payoff']
 
-        self.terminal = kwargs['terminal']
+        if 'terminal' in kwargs:
+            self.terminal = kwargs['terminal']
         self.node_map = {}
 
     def train(self, cards, iterations):
