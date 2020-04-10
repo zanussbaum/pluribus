@@ -1,10 +1,7 @@
 import numpy as np
-import argparse
 from itertools import permutations
 from vanilla_cfr import VanillaCFR
 from node import InfoSet
-
-
 class MonteCarloCFR(VanillaCFR):
     """An object to run Monte Carlo Counter Factual Regret 
 
@@ -41,7 +38,7 @@ class MonteCarloCFR(VanillaCFR):
 
         See object attributes for params
         """
-        super().__init__(num_players, num_actions,**kwargs)
+        super().__init__(num_players, num_actions, **kwargs)
         self.num_betting_rounds = num_betting_rounds
         self.num_raises = num_raises
         self.regret_minimum = -300000
@@ -49,54 +46,8 @@ class MonteCarloCFR(VanillaCFR):
         self.prune_threshold = 200
         self.discount_interval = 10
         self.lcfr_threshold = 400
-        self.action_mapping = {'F':0, 'P': 1, 'C':2, 'R':3}
-        self.reverse_mapping = {0:'F', 1:'P', 2:'C', 3:'R'}
-        if 'payoff' in kwargs:
-            self.__custom_payoff = kwargs['payoff']
-        
-    def payoff(self, history, cards):
-        """Main function that calls the payoff function
-
-        If there is no payoff passed through when the object
-        is created, it will default to the 2 player Kuhn poker payoff
-
-        Args:
-            history: string of betting round(s)
-            cards: array-like of ints of cards
-
-        Returns:
-            utilities: array-like of utilities for each player
-        """
-        try:
-            return self.__custom_payoff(self, history, cards)
-        except:
-            return self.__payoff(history, cards)
-
-
-    def __payoff(self, history, cards):
-        """Calculates the payoff for 2 player Kuhn poker
-
-        Standard payoff for 2 player Kuhn poker
-        based on the cards and history.
-
-        Args:
-            history: string of betting round(s)
-            cards: array-like of ints of cards
-
-        Returns:
-            utilities: array-like of utilities for each player
-        """
-        winner = np.argmax(cards[:self.num_players])
-        if history == "PRF" or history == 'F':
-            return [-1, 1]
-        elif history == "RF" or history == 'PF':
-            return [1, -1]
-        if history == "PP":
-            utilities = [1 if i == winner else -1 for i in range(self.num_players)]
-            return utilities
-        if history in ["RC", "PRC"]:
-            utilities = [2 if i == winner else -2 for i in range(self.num_players)]
-            return utilities
+        self.action_mapping = {'P':0, 'B':1}
+        self.reverse_mapping = {0:'P', 1:'B'}
 
     def train(self, cards, iterations):
         """Runs MonteCarloCFR and prints the calculated strategies
@@ -141,8 +92,7 @@ class MonteCarloCFR(VanillaCFR):
             for key in sorted(player_info_sets.keys(), key=lambda x: (len(x), x)):
                 node = player_info_sets[key]
                 strategy = node.get_avg_strategy()
-                print("{}:\t F: {} P: {} C: {} R: {}".format(
-                    key, strategy[0], strategy[1], strategy[2], strategy[3]))
+                print("{}:\t P: {} B: {}".format(key, strategy[0], strategy[1]))
 
 
     def mccfr(self, cards, history, player, prune=False):
@@ -158,20 +108,20 @@ class MonteCarloCFR(VanillaCFR):
             array_like: float of expected utilities
         """
         curr_player = self.which_player(history)
-        if self.is_terminal(history):
+        if history in self.terminal:
             utility = self.payoff(history, cards)
             return np.array(utility)
 
-        # if self.is_not_in(history, player):
+        #TODO what do we do here?
+        # elif self.is_not_in(history, player):
         #     next_history = history + '-'
         #     return self.mccfr(cards, next_history, player)
-        #why is this not converging like before
+
         # elif self.is_chance(history):
         #     next_history = history + '\n'
         #     #TODO sample cards to deal, then traverse
         #     return self.mccfr(cards, next_history, player)
         elif curr_player == player:
-           
             info_set = str(cards[player]) + '|' + history
             player_nodes = self.node_map.setdefault(player, {})
             node = player_nodes.setdefault(info_set, InfoSet(info_set, self.num_actions, player))
@@ -216,10 +166,7 @@ class MonteCarloCFR(VanillaCFR):
             player_nodes = self.node_map.setdefault(curr_player, {})
             node = player_nodes.setdefault(info_set, InfoSet(info_set, self.num_actions, curr_player))
 
-            actions = self.get_valid_actions(history)
-            mappings = [self.action_mapping[key] for key in actions]
-            valid_actions = [True if key in mappings else False for key in range(self.num_actions)]
-            strategy = node.get_strategy(np.array(valid_actions))
+            strategy = node.get_strategy()
             choice = np.random.choice(self.num_actions, p=strategy)
             action = self.reverse_mapping[choice]
             next_history = history + action
@@ -240,7 +187,7 @@ class MonteCarloCFR(VanillaCFR):
             player: int of which player we are updating
         """
         betting_round = history.rfind('\n')
-        if self.is_terminal(history) or betting_round != -1:
+        if history in self.terminal or betting_round != -1:
             return
 
         elif self.which_player(history) == player:
@@ -248,10 +195,7 @@ class MonteCarloCFR(VanillaCFR):
             player_nodes = self.node_map.setdefault(player, {})
             node = player_nodes.setdefault(info_set, InfoSet(info_set, self.num_actions, player))
 
-            actions = self.get_valid_actions(history)
-            mappings = [self.action_mapping[key] for key in actions]
-            valid_actions = [True if key in mappings else False for key in range(self.num_actions)]
-            strategy = node.get_strategy(np.array(valid_actions))
+            strategy = node.get_strategy()
             choice = np.random.choice(self.num_actions, p=strategy)
             node.strategy_sum[choice] += 1
             action = self.reverse_mapping[choice]
@@ -264,7 +208,7 @@ class MonteCarloCFR(VanillaCFR):
                 next_history = history + action
                 self.update_strategy(next_history, player, cards)
 
-
+    
     def expected_utility(self, cards):
         """Calculates the expected utility from the average strategy
 
@@ -306,7 +250,7 @@ class MonteCarloCFR(VanillaCFR):
         Returns:
             util: array_like of floats for expected utility for this node
         """
-        if self.is_terminal(history):
+        if history in self.terminal:
             utility = self.payoff(history, card)
             return np.array(utility)
 
@@ -336,14 +280,13 @@ class MonteCarloCFR(VanillaCFR):
             history: str of public betting history
         """
         current_round = history.rfind('\n')
-        start = current_round if current_round != -1 else 0
-        outstanding_bet = history[start:].find('R')
+        outstanding_bet = history[current_round:].find('B')
 
         if outstanding_bet != -1:
-            if history[start:].count('R') >= self.num_raises:
-                return ['F', 'C']
-            return ['F', 'C', 'R']
-        return ['F', 'P', 'R']
+            if history[current_round:].count('R') > self.num_raises:
+                return ['P', 'B']
+            return ['P', 'B']
+        return ['P', 'B']
 
 
     def which_player(self, history):
@@ -362,6 +305,7 @@ class MonteCarloCFR(VanillaCFR):
         
 
     def is_not_in(self, history, player):
+        #TODO implement this
         actions_per_round = history.split('\n')
         player_actions = set()
         
@@ -373,42 +317,41 @@ class MonteCarloCFR(VanillaCFR):
         return True if 'F' in player_actions else False
 
     def is_terminal(self, history):
-        end = history.rfind('\n')
-        last_round = end if end != -1 else 0
-
-        current_round = history[last_round:]
-        num_folded = current_round.count('F')
-
-        if num_folded == self.num_players - 1:
-            return True
-
-        num_rounds = history.count('\n')
+        #TODO implement this
+        if self.is_chance(history):
+            rounds = history.count('\n') + 1
+            # if you're in the last betting round
+            if rounds == self.num_betting_rounds:
+                start = history.rfind('\n')
+                start = start if start != -1 else 0
+                folded = history[start+1:].count('-') + history[start:].count('F')
+                # if everyone's folded but one player
+                if folded == self.num_players - 1:
+                    return True
+                return False
+            return False
         
-        #if we are in the last round
-        if num_rounds == self.num_betting_rounds - 1:
-            outstanding_bet = current_round.rfind('R')
-            # if there's no outstanding bet
-            if outstanding_bet == -1:
-                num_checked = current_round.count('P')
-                # if everyone has either checked or folded
-                if num_checked + num_folded == self.num_players:
-                    return True
-                return False
-
-            else:
-                num_called = current_round.count('C')
-                # if everyone has either called or folded
-                if num_called + num_folded == self.num_players - 1:
-                    return True
-                return False
         return False
-                
+        
 
     def is_chance(self, history):
         #TODO implement this
-        raise NotImplementedError('TODO')
+        current_round = history.rfind('\n')
+        start = current_round if current_round != -1 else 0
+        if history[start:].count('P') == self.num_players:
+            return True
 
+        
+        outstanding_bet = history[start+1:].rfind('B')
+        if outstanding_bet != -1:
+            did_call = history[outstanding_bet+1:].count('B')
+            # if everyone else folded or called after the bet 
+            folded = history[start+1:].count('P')
+            if did_call + folded == self.num_players - 1:
+                return True
+            return False
 
+        return False
 
 
 

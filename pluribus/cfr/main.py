@@ -115,15 +115,17 @@ elif args.cfr == 2:
 
 elif args.mccfr == 1:
     cards = [i for i in range(1, 4)]
-
-    mccfr = MonteCarloCFR(2, 4, args.rounds, args.raises)
+    TERMINAL = ["PP", "PBP", "PBB", "BP", "BB"]
+    mccfr = MonteCarloCFR(2, 2, args.rounds, args.raises, terminal=TERMINAL)
 
     mccfr.train(cards, args.iterations)
 
 elif args.mccfr == 2:
     cards = np.array([i for i in range(1, 5)])
-
-    mccfr = MonteCarloCFR(3, 4, args.rounds, args.raises, payoff=three_player_mccfr)
+    TERMINAL = ["PPP", "PPBPP", "PPBPB", "PPBBP", "PPBBB", "PBPP",
+            "PBPB", "PBBP", "PBBB", "BPP", "BPB", "BBP", "BBB"
+        ]
+    mccfr = MonteCarloCFR(3, 2, args.rounds, args.raises, terminal=TERMINAL, payoff=three_player_payoff)
 
     mccfr.train(cards, args.iterations)
     

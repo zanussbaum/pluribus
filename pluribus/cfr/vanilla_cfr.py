@@ -58,7 +58,7 @@ class VanillaCFR:
             iterations: int for number of iterations to run
         """
         player_utils = np.zeros(self.num_players)
-        for _ in range(iterations):
+        for _ in range(1, iterations+1):
             if _ % 1000 == 0:
                 print("Iteration {}/{}".format(_, iterations))
             np.random.shuffle(cards)
