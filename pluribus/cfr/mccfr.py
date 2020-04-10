@@ -317,20 +317,34 @@ class MonteCarloCFR(VanillaCFR):
         return True if 'F' in player_actions else False
 
     def is_terminal(self, history):
-        #TODO implement this
-        if self.is_chance(history):
-            rounds = history.count('\n') + 1
-            # if you're in the last betting round
-            if rounds == self.num_betting_rounds:
-                start = history.rfind('\n')
-                start = start if start != -1 else 0
-                folded = history[start+1:].count('-') + history[start:].count('F')
-                # if everyone's folded but one player
-                if folded == self.num_players - 1:
+        end = history.rfind('\n')
+        last_round = end if end != -1 else 0
+
+        current_round = history[last_round:]
+        num_folded = current_round.count('F')
+
+        if num_folded == self.num_players - 1:
+            return True
+
+        num_rounds = history.count('\n')
+        
+        #if we are in the last round
+        if num_rounds == self.num_betting_rounds - 1:
+            outstanding_bet = current_round.rfind('R')
+            # if there's no outstanding bet
+            if outstanding_bet == -1:
+                num_checked = current_round.count('P')
+                # if everyone has either checked or folded
+                if num_checked + num_folded == self.num_players:
                     return True
                 return False
-            return False
-        
+
+            else:
+                num_called = current_round.count('C')
+                # if everyone has either called or folded
+                if num_called + num_folded == self.num_players - 1:
+                    return True
+                return False
         return False
         
 
