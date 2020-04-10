@@ -1,5 +1,5 @@
 import numpy as np
-from node import Node
+from pluribus.cfr.node import Node
 from itertools import permutations
 
 class VanillaCFR:

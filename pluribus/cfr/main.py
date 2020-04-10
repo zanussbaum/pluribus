@@ -1,8 +1,8 @@
 import argparse
 import numpy as np 
-from regret_min import RegretMin
-from vanilla_cfr import VanillaCFR
-from mccfr import MonteCarloCFR
+from pluribus.cfr.regret_min import RegretMin
+from pluribus.cfr.vanilla_cfr import VanillaCFR
+from pluribus.cfr.mccfr import MonteCarloCFR
 
 
 def three_player_payoff(self, history, cards):

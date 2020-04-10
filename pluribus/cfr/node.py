@@ -1,5 +1,5 @@
 import numpy as np
-from regret_min import RegretMin
+from pluribus.cfr.regret_min import RegretMin
 
 
 class Node(RegretMin):

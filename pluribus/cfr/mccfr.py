@@ -1,7 +1,7 @@
 import numpy as np
 from itertools import permutations
-from vanilla_cfr import VanillaCFR
-from node import InfoSet
+from pluribus.cfr.vanilla_cfr import VanillaCFR
+from pluribus.cfr.node import InfoSet
 class MonteCarloCFR(VanillaCFR):
     """An object to run Monte Carlo Counter Factual Regret 
 
