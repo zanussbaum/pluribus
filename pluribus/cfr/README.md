@@ -20,7 +20,8 @@ mccfr
 
 
 - [x] 2 player Kuhn Poker 
-- [ ] 3 player Kuhn Poker
+- [x] 3 player Kuhn Poker
+- [ ] 2 and 3 player 4 action Kuhn Poker 
 - [ ] 3 player, multiround Kuhn Poker
 
 main
