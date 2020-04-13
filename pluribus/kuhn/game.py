@@ -9,13 +9,13 @@ class Hand:
     a variable number of players
 
     Attributes:
+        num_players: int number of players
+        num_rounds: int number of max betting rounds
+        cards: n-d array of ints for card ordering this hand
         players_in: list of bool for which players are still in 
         bets: list of ints for how much each player has bet
-        cards: n-d array of ints for card ordering this hand
         _history: 2d array/list of str for public betting history
         round: int for which round it is
-        num_rounds: int number of max betting rounds
-        num_players: int number of players
     """
     def __init__(self, num_players, num_rounds, cards):
         """Initializes the class
@@ -166,7 +166,7 @@ class Hand:
         """Calculates the payoff of a terminal state
 
         This function assumes that there can be ties
-        
+
         Returns:
             list: list of floats of payoffs for each player
         """
@@ -191,6 +191,32 @@ class Hand:
             payoffs[w] += payoff
 
         return payoffs
+
+    def which_player(self):
+        current_round = self.history[-1]
+        return len(current_round) % self.num_players
+
+    def valid_actions(self):
+        # TODO
+        return ['P', 'B']
+        """
+        def get_valid_actions(self, history):
+        Gets the valid actions for the current round
+
+        Args:
+            history: str of public betting history
+        
+        current_round = history.rfind('\n')
+        outstanding_bet = history[current_round:].find('B')
+
+        if outstanding_bet != -1:
+            if history[current_round:].count('R') > self.num_raises:
+                return ['P', 'B']
+            return ['P', 'B']
+        return ['P', 'B']
+        """
+        raise NotImplementedError('TODO')
+        
 
 
 

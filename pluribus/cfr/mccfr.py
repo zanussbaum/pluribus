@@ -2,6 +2,7 @@ import numpy as np
 from itertools import permutations
 from pluribus.cfr.vanilla_cfr import VanillaCFR
 from pluribus.cfr.node import InfoSet
+from pluribus.kuhn.game import Hand
 class MonteCarloCFR(VanillaCFR):
     """An object to run Monte Carlo Counter Factual Regret 
 
@@ -64,16 +65,18 @@ class MonteCarloCFR(VanillaCFR):
                 print('Iteration {}/{}'.format(t, iterations))
             np.random.shuffle(cards)
             for player in range(self.num_players):
+                hand = Hand(self.num_players, self.num_betting_rounds, cards)
                 if t % self.strategy_interval == 0:
-                    self.update_strategy('', player, cards)
+                    #TODO look at this
+                    self.update_strategy(player, hand)
                 if t > self.prune_threshold:
                     will_prune = np.random.random()
                     if will_prune < .05:
-                        self.mccfr(cards, '', player)
+                        self.mccfr(player, hand)
                     else:
-                        self.mccfr(cards, '', player, prune=True)
+                        self.mccfr(player, hand, prune=True)
                 else:
-                    self.mccfr(cards, '', player)
+                    self.mccfr(player, hand)
 
             if t < self.lcfr_threshold and t % self.discount_interval == 0:
                 discount = (t/self.discount_interval)/(t/self.discount_interval+ 1)
@@ -91,11 +94,11 @@ class MonteCarloCFR(VanillaCFR):
             print('information set:\tstrategy:\t')
             for key in sorted(player_info_sets.keys(), key=lambda x: (len(x), x)):
                 node = player_info_sets[key]
-                strategy = node.get_avg_strategy()
+                strategy = node.avg_strategy()
                 print("{}:\t P: {} B: {}".format(key, strategy[0], strategy[1]))
 
 
-    def mccfr(self, cards, history, player, prune=False):
+    def mccfr(self, player, hand, prune=False):
         """Main function that runs the MonteCarloCFR
 
         Args:
@@ -107,9 +110,9 @@ class MonteCarloCFR(VanillaCFR):
         Returns:
             array_like: float of expected utilities
         """
-        curr_player = self.which_player(history)
-        if history in self.terminal:
-            utility = self.payoff(history, cards)
+        curr_player = hand.which_player()
+        if hand.is_terminal():
+            utility = hand.payoff()
             return np.array(utility)
 
         #TODO what do we do here?
@@ -122,12 +125,13 @@ class MonteCarloCFR(VanillaCFR):
         #     #TODO sample cards to deal, then traverse
         #     return self.mccfr(cards, next_history, player)
         elif curr_player == player:
-            info_set = str(cards[player]) + '|' + history
+            info_set = hand.info_set(player)
             player_nodes = self.node_map.setdefault(player, {})
-            node = player_nodes.setdefault(info_set, InfoSet(info_set, self.num_actions, player))
+            node = player_nodes.setdefault(info_set, 
+                            InfoSet(info_set, self.num_actions, player))
 
-            strategy = node.get_strategy()
-            valid_actions = self.get_valid_actions(history)
+            strategy = node.strategy()
+            valid_actions = hand.valid_actions()
 
             expected_value = np.zeros(self.num_players)
             utilities = np.zeros(self.num_actions)
@@ -138,14 +142,14 @@ class MonteCarloCFR(VanillaCFR):
                 mapping = self.action_mapping[action]
                 if prune:
                     if node.regret_sum[mapping] > self.regret_minimum:
-                        next_history = next_history = history + action
-                        calculated_util  = self.mccfr(cards, next_history, player, prune=True)
+                        new_hand = hand.add(player, action)
+                        calculated_util  = self.mccfr(player, new_hand, prune=True)
                         utilities[mapping] = calculated_util[player]
                         expected_value += calculated_util * strategy[mapping]
                         explored.add(action)
                 else:
-                    next_history = history + action
-                    calculated_util  = self.mccfr(cards, next_history, player)
+                    new_hand = hand.add(player, action)
+                    calculated_util  = self.mccfr(player, new_hand)
                     utilities[mapping] = calculated_util[player]
                     expected_value += calculated_util * strategy[mapping]
             
@@ -162,18 +166,19 @@ class MonteCarloCFR(VanillaCFR):
             return expected_value
 
         else:
-            info_set = str(cards[curr_player]) + '|' + history
+            info_set = hand.info_set(curr_player)
             player_nodes = self.node_map.setdefault(curr_player, {})
-            node = player_nodes.setdefault(info_set, InfoSet(info_set, self.num_actions, curr_player))
+            node = player_nodes.setdefault(info_set, 
+                            InfoSet(info_set, self.num_actions, curr_player))
 
-            strategy = node.get_strategy()
+            strategy = node.strategy()
             choice = np.random.choice(self.num_actions, p=strategy)
             action = self.reverse_mapping[choice]
-            next_history = history + action
-            return self.mccfr(cards, next_history, player, prune=prune)
+            new_hand = hand.add(curr_player, action)
+            return self.mccfr(player, new_hand, prune=prune)
 
 
-    def update_strategy(self, history, player, cards):
+    def update_strategy(self, player, hand):
         """After running for a fixed number of iterations, update the average
         strategies
         
@@ -186,27 +191,30 @@ class MonteCarloCFR(VanillaCFR):
             history: str of public betting history
             player: int of which player we are updating
         """
-        betting_round = history.rfind('\n')
-        if history in self.terminal or betting_round != -1:
+
+        #TODO add if hand is after first round
+        curr_player = hand.which_player()
+        if hand.is_terminal():
             return
 
-        elif self.which_player(history) == player:
-            info_set = str(cards[player]) + '|' + history
+        elif curr_player == player:
+            info_set = hand.info_set(player)
             player_nodes = self.node_map.setdefault(player, {})
-            node = player_nodes.setdefault(info_set, InfoSet(info_set, self.num_actions, player))
+            node = player_nodes.setdefault(info_set, 
+                            InfoSet(info_set, self.num_actions, player))
 
-            strategy = node.get_strategy()
+            strategy = node.strategy()
             choice = np.random.choice(self.num_actions, p=strategy)
             node.strategy_sum[choice] += 1
             action = self.reverse_mapping[choice]
-            next_history = history + action
-            self.update_strategy(next_history, player, cards)
+            new_hand = hand.add(player, action)
+            self.update_strategy(player, new_hand)
 
         else:
-            valid_actions = self.get_valid_actions(history)
+            valid_actions = hand.valid_actions()
             for action in valid_actions:
-                next_history = history + action
-                self.update_strategy(next_history, player, cards)
+                new_hand = hand.add(curr_player, action)
+                self.update_strategy(player, new_hand)
 
     
     def expected_utility(self, cards):
@@ -229,13 +237,13 @@ class MonteCarloCFR(VanillaCFR):
 
         expected_utility = np.zeros(self.num_players)
         for card in all_combos:
-            history = ''
-            expected_utility += self.traverse_tree(history, 0, card)
+            hand = Hand(self.num_players, 1, card)
+            expected_utility += self.traverse_tree(0, hand)
 
         return expected_utility/len(all_combos)
 
 
-    def traverse_tree(self, history, player, card):
+    def traverse_tree(self, player, hand):
         """Helper funtion that traverses the tree to calculate expected utility
 
         Calculates the strategy profile from the average strategy 
@@ -250,122 +258,24 @@ class MonteCarloCFR(VanillaCFR):
         Returns:
             util: array_like of floats for expected utility for this node
         """
-        if history in self.terminal:
-            utility = self.payoff(history, card)
+        if hand.is_terminal():
+            utility = hand.payoff()
             return np.array(utility)
 
-        info_set = str(card[player]) + '|' + history
-        player_nodes = self.node_map[player]
-        node = player_nodes[info_set]
+        info_set = hand.info_set(player)
+        player_nodes = self.node_map.setdefault(player, {})
+        node = player_nodes.setdefault(info_set, 
+                            InfoSet(info_set, self.num_actions, player))
 
-        strategy = node.get_avg_strategy()
+        strategy = node.avg_strategy()
         next_player = (player + 1) % self.num_players
         util = np.zeros(self.num_players)
-        actions = self.get_valid_actions(history)
-        mappings = [self.action_mapping[key] for key in actions]
-        valid_actions = [True if key in mappings else False for key in range(self.num_actions)]
-        for i, valid in enumerate(valid_actions):
-            if valid:
-                action = self.reverse_mapping[i]
-                next_history = history + action
-                util += self.traverse_tree(next_history, next_player, card) * strategy[i]
+        valid_actions = hand.valid_actions()
+        for i, action in enumerate(valid_actions):
+            new_hand = hand.add(player, action)
+            util += self.traverse_tree(next_player, new_hand) * strategy[i]
 
         return util
-
-
-    def get_valid_actions(self, history):
-        """Gets the valid actions for the current round
-
-        Args:
-            history: str of public betting history
-        """
-        current_round = history.rfind('\n')
-        outstanding_bet = history[current_round:].find('B')
-
-        if outstanding_bet != -1:
-            if history[current_round:].count('R') > self.num_raises:
-                return ['P', 'B']
-            return ['P', 'B']
-        return ['P', 'B']
-
-
-    def which_player(self, history):
-        """Which player's turn it is
-
-        Args:
-            history: str of public betting history
-
-        Returns:
-            int: which player's turn it is
-        """
-        num_rounds = history.count('\n')
-        hist_len = len(history) - num_rounds
-        
-        return hist_len % self.num_players
-        
-
-    def is_not_in(self, history, player):
-        #TODO implement this
-        actions_per_round = history.split('\n')
-        player_actions = set()
-        
-        for each_round in actions_per_round:
-            for action in each_round[player::self.num_players]:
-                player_actions.add(action)
-
-
-        return True if 'F' in player_actions else False
-
-    def is_terminal(self, history):
-        end = history.rfind('\n')
-        last_round = end if end != -1 else 0
-
-        current_round = history[last_round:]
-        num_folded = current_round.count('F')
-
-        if num_folded == self.num_players - 1:
-            return True
-
-        num_rounds = history.count('\n')
-        
-        #if we are in the last round
-        if num_rounds == self.num_betting_rounds - 1:
-            outstanding_bet = current_round.rfind('R')
-            # if there's no outstanding bet
-            if outstanding_bet == -1:
-                num_checked = current_round.count('P')
-                # if everyone has either checked or folded
-                if num_checked + num_folded == self.num_players:
-                    return True
-                return False
-
-            else:
-                num_called = current_round.count('C')
-                # if everyone has either called or folded
-                if num_called + num_folded == self.num_players - 1:
-                    return True
-                return False
-        return False
-        
-
-    def is_chance(self, history):
-        #TODO implement this
-        current_round = history.rfind('\n')
-        start = current_round if current_round != -1 else 0
-        if history[start:].count('P') == self.num_players:
-            return True
-
-        
-        outstanding_bet = history[start+1:].rfind('B')
-        if outstanding_bet != -1:
-            did_call = history[outstanding_bet+1:].count('B')
-            # if everyone else folded or called after the bet 
-            folded = history[start+1:].count('P')
-            if did_call + folded == self.num_players - 1:
-                return True
-            return False
-
-        return False
 
 
 

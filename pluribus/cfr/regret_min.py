@@ -27,12 +27,12 @@ class RegretMin:
         """
         self.actions = num_actions
         self.regret_sum = np.zeros(num_actions)
-        self.strategy = np.zeros(num_actions)
+        self.curr_strategy = np.zeros(num_actions)
         self.strategy_sum = np.zeros(num_actions)
         self.opponent_strategy = opponent_strategy
         self.utilities = utilities
 
-    def get_strategy(self):
+    def strategy(self):
         """Calculates the new strategy based on regrets
 
         Gets the current strategy through regret matching
@@ -40,17 +40,17 @@ class RegretMin:
         Returns:
             strategy: a numpy array of the current strategy
         """
-        self.strategy = np.maximum(self.regret_sum, 0)
-        norm_sum = np.sum(self.strategy)
+        self.curr_strategy = np.maximum(self.regret_sum, 0)
+        norm_sum = np.sum(self.curr_strategy)
 
         if norm_sum > 0:
-            self.strategy /= norm_sum
+            self.curr_strategy /= norm_sum
         else:
-            self.strategy = np.ones(self.actions)/self.actions
+            self.curr_strategy = np.ones(self.actions)/self.actions
 
-        self.strategy_sum += self.strategy
+        self.strategy_sum += self.curr_strategy
 
-        return self.strategy
+        return self.curr_strategy
 
     def get_action(self, strategy):
         """Chooses a random action based on a strategy
@@ -79,7 +79,7 @@ class RegretMin:
         """
         for _ in range(iterations):
             # get regret-matched mixed strategy
-            strategy = self.get_strategy()
+            strategy = self.strategy()
             action = self.get_action(strategy)
             opponent_action = self.get_action(self.opponent_strategy)
             # compute action utilities
@@ -87,7 +87,7 @@ class RegretMin:
             # accumulate action regrets
             self.regret_sum += action_utility - action_utility[action]
 
-    def get_avg_strategy(self): 
+    def avg_strategy(self): 
         """Calculates the average strategy over all training iterations
 
         Altough the training runs for a number of iterations,

@@ -25,10 +25,10 @@ class Node(RegretMin):
         self.info_set = info_set
         self.actions = num_actions
         self.regret_sum = np.zeros(num_actions)
-        self.strategy = np.zeros(num_actions)
+        self.curr_strategy = np.zeros(num_actions)
         self.strategy_sum = np.zeros(num_actions)
 
-    def get_strategy(self, weight=1):
+    def strategy(self, weight=1):
         """Calculates the new strategy based on regrets
 
         Gets the current strategy through regret matching
@@ -37,23 +37,23 @@ class Node(RegretMin):
         Returns:
             strategy: a numpy array of the current strategy
         """
-        strategy = np.maximum(self.regret_sum, 0)
-        norm_sum = np.sum(strategy)
+        strat = np.maximum(self.regret_sum, 0)
+        norm_sum = np.sum(strat)
 
         if norm_sum > 0:
-            strategy /= norm_sum
+            strat /= norm_sum
         else:
-            strategy = np.ones(self.actions)/self.actions
+            strat = np.ones(self.actions)/self.actions
 
-        self.strategy_sum += strategy * weight
+        self.strategy_sum += strat * weight
 
-        self.strategy = strategy
+        self.curr_strategy = strat
 
-        return strategy
+        return strat
 
     def __repr__(self):
         return 'info: {} strategy_sum: {} regret: {} strategy: {}'.format(
-            self.info_set, self.strategy_sum, self.regret_sum, self.strategy)
+            self.info_set, self.strategy_sum, self.regret_sum, self.curr_strategy)
 
     def __eq__(self, value):
         return self.info_set == value.info_set
@@ -76,7 +76,7 @@ class InfoSet(Node):
         self.player = player
 
 
-    def get_strategy(self, actions=None):
+    def strategy(self, actions=None):
         """Calculates the strategy given a player's regrets
 
         This function is similar to the Node class get_strategy
@@ -84,26 +84,26 @@ class InfoSet(Node):
         to the strategy_sum like we do in Node since we are running a 
         Monte Carlo process
         """
-        strategy = np.maximum(self.regret_sum, 0)
+        strat = np.maximum(self.regret_sum, 0)
         if actions is not None:
             # if we are here, we just want to get the conditional probability that we play that prob
             # this is the case where the opponent is traversing
-            norm_sum = np.array(sum([prob for i, prob in enumerate(strategy) if actions[i]]))
+            norm_sum = np.array(sum([prob for i, prob in enumerate(strat) if actions[i]]))
             if norm_sum > 0:
-                strategy = np.divide(strategy, norm_sum, out=np.zeros_like(strategy), where=actions==True)
+                strat = np.divide(strat, norm_sum, out=np.zeros_like(strat), where=actions==True)
             else:
                 num_valid = sum(actions)
-                strategy = np.array([1/num_valid if action else 0 for action in actions])
+                strat = np.array([1/num_valid if action else 0 for action in actions])
 
-            return strategy
+            return strat
 
-        norm_sum = np.sum(strategy)
+        norm_sum = np.sum(strat)
 
         if norm_sum > 0:
-            strategy /= norm_sum
+            strat /= norm_sum
         else:
-            strategy = np.ones(self.actions)/self.actions
+            strat = np.ones(self.actions)/self.actions
 
-        self.strategy = strategy
+        self.curr_strategy = strat
     
-        return strategy
+        return strat

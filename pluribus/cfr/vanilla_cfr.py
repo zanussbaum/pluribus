@@ -6,7 +6,6 @@ from pluribus.kuhn.game import Hand
 class VanillaCFR:
     """An object to run Vanilla Counterfactual regret on Kuhn poker, or other games
 
-    This currently doesn't support multiplayer Kuhn poker
     The expected value for player one in 2 player poker is ~ -.05
     This version of CFR assumes there are only two actions P for pass and
     B for bet. We assume that these are akin to checking and raising
@@ -18,7 +17,6 @@ class VanillaCFR:
         num_players: An integer of players playing
         num_actions: An integer of actions
         actions: A list of strings of the allowed actions
-        __custom_payoff: a method to determine different payoffs (only used for multiplayer)
         terminal: a list of strings of the terminal states in the game
         node_map: a dictionary of nodes of each information set
     """
@@ -71,7 +69,7 @@ class VanillaCFR:
             print('information set:\tstrategy:\t')
             for key in sorted(player_info_sets.keys(), key=lambda x: (len(x), x)):
                 node = player_info_sets[key]
-                strategy = node.get_avg_strategy()
+                strategy = node.avg_strategy()
                 print("{}:\t P: {} B: {}".format(key, strategy[0], strategy[1]))
 
     def cfr(self, player, hand, probability):    
@@ -100,7 +98,7 @@ class VanillaCFR:
         node = player_nodes.setdefault(info_set, 
                             Node(info_set, self.num_actions))
 
-        strategy = node.get_strategy(probability[player])
+        strategy = node.strategy(probability[player])
         utilities = np.zeros(self.num_actions)
         next_player = (player + 1) % self.num_players
 
@@ -112,7 +110,6 @@ class VanillaCFR:
             utilities[i] = returned_util[player]
             node_util += returned_util * strategy[i]
            
-
         opp_prob = 1
         for i, prob in enumerate(probability):
             if i != player:
@@ -174,7 +171,7 @@ class VanillaCFR:
         node = player_nodes.setdefault(info_set, 
                             Node(info_set, self.num_actions))
 
-        strategy = node.get_avg_strategy()
+        strategy = node.avg_strategy()
         next_player = (player + 1) % self.num_players
         util = np.zeros(self.num_players)
         for i, action in enumerate(self.actions):
