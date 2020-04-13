@@ -99,8 +99,8 @@ elif args.cfr == 1:
     TERMINAL = ["PP", "PBP", "PBB", "BP", "BB"]
 
     kuhn_regret = VanillaCFR(2, 2, terminal=TERMINAL, actions=ACTIONS)
-
     kuhn_regret.train(cards, args.iterations)
+    
 elif args.cfr == 2:
     cards = np.array([i for i in range(1, 5)])
     ACTIONS = ['P', 'B']

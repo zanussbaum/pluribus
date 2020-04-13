@@ -1,5 +1,5 @@
 import numpy as np
-from player import BasePlayer as Player
+from pluribus.kuhn.player import BasePlayer as Player
 
  
 class Kuhn:

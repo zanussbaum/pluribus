@@ -1,6 +1,7 @@
 import numpy as np
 from pluribus.cfr.node import Node
 from itertools import permutations
+from pluribus.kuhn.game import Hand
 
 class VanillaCFR:
     """An object to run Vanilla Counterfactual regret on Kuhn poker, or other games
@@ -40,11 +41,6 @@ class VanillaCFR:
             self.actions = [i for i in range(num_actions)]
         else:
             self.actions = kwargs['actions']
-        if 'payoff' in kwargs:
-            self.__custom_payoff = kwargs['payoff']
-
-        if 'terminal' in kwargs:
-            self.terminal = kwargs['terminal']
         self.node_map = {}
 
     def train(self, cards, iterations):
@@ -57,13 +53,14 @@ class VanillaCFR:
             cards: array-like of ints denoting each card
             iterations: int for number of iterations to run
         """
-        player_utils = np.zeros(self.num_players)
+
         for _ in range(1, iterations+1):
             if _ % 1000 == 0:
                 print("Iteration {}/{}".format(_, iterations))
             np.random.shuffle(cards)
             prob = tuple(np.ones(self.num_players))
-            player_utils += self.cfr(0, cards, "", prob)
+            hand = Hand(self.num_players, 1, cards)
+            self.cfr(0, hand, prob)
 
         
         expected_utilities = self.expected_utility(cards)
@@ -77,53 +74,7 @@ class VanillaCFR:
                 strategy = node.get_avg_strategy()
                 print("{}:\t P: {} B: {}".format(key, strategy[0], strategy[1]))
 
-
-    def __payoff(self, history, cards):
-        """Calculates the payoff for 2 player Kuhn poker
-
-        Standard payoff for 2 player Kuhn poker
-        based on the cards and history.
-
-        Args:
-            history: string of betting round(s)
-            cards: array-like of ints of cards
-
-        Returns:
-            utilities: array-like of utilities for each player
-        """
-        winner = np.argmax(cards[:self.num_players])
-        if history == "PBP":
-            return [-1, 1]
-        elif history == "BP":
-            return [1, -1]
-        if history == "PP":
-            utilities = [1 if i == winner else -1 for i in range(self.num_players)]
-            return utilities
-        if history in ["BB", "PBB"]:
-            utilities = [2 if i == winner else -2 for i in range(self.num_players)]
-            return utilities
-
-    
-    def payoff(self, history, cards):
-        """Function that calls the payoff function
-
-        If there is no payoff passed through when the object
-        is created, it will default to the 2 player Kuhn poker payoff
-
-        Args:
-            history: string of betting round(s)
-            cards: array-like of ints of cards
-
-        Returns:
-            utilities: array-like of utilities for each player
-        """
-        try:
-            return self.__custom_payoff(self, history, cards)
-        except:
-            return self.__payoff(history, cards)
-
-    
-    def cfr(self, player, cards, history, probability):    
+    def cfr(self, player, hand, probability):    
         """Runs the VanillaCFR algorithm
 
         Calculates the regret for each information set
@@ -140,11 +91,11 @@ class VanillaCFR:
             utility: array-like of floats for the utility
                 for the current node 
         """    
-        if history in self.terminal:
-            utility = self.payoff(history, cards)
+        if hand.is_terminal():
+            utility = hand.payoff()
             return np.array(utility)
 
-        info_set = str(cards[player]) + '|' + history
+        info_set = hand.info_set(player)
         player_nodes = self.node_map.setdefault(player, {})
         node = player_nodes.setdefault(info_set, 
                             Node(info_set, self.num_actions))
@@ -155,9 +106,9 @@ class VanillaCFR:
 
         node_util = np.zeros(self.num_players)
         for i, action in enumerate(self.actions):
-            next_history = history + action
+            new_hand = hand.add(player, action)
             new_prob = tuple(prob if j != player else prob * strategy[i] for j, prob in enumerate(probability))
-            returned_util = self.cfr(next_player, cards, next_history, new_prob)
+            returned_util = self.cfr(next_player, new_hand, new_prob)
             utilities[i] = returned_util[player]
             node_util += returned_util * strategy[i]
            
@@ -193,12 +144,13 @@ class VanillaCFR:
 
         expected_utility = np.zeros(self.num_players)
         for card in all_combos:
-            history = ''
-            expected_utility += self.traverse_tree(history, 0, card)
+            hand = Hand(self.num_players, 1, card)
+            expected_utility += self.traverse_tree(0, hand)
 
         return expected_utility/len(all_combos)
 
-    def traverse_tree(self, history, player, card):
+
+    def traverse_tree(self, player, hand):
         """Helper funtion that traverses the tree to calculate expected utility
 
         Calculates the strategy profile from the average strategy 
@@ -213,19 +165,20 @@ class VanillaCFR:
         Returns:
             util: array_like of floats for expected utility for this node
         """
-        if history in self.terminal:
-            utility = self.payoff(history, card)
+        if hand.is_terminal():
+            utility = hand.payoff()
             return np.array(utility)
 
-        info_set = str(card[player]) + '|' + history
-        player_nodes = self.node_map[player]
-        node = player_nodes[info_set]
+        info_set = hand.info_set(player)
+        player_nodes = self.node_map.setdefault(player, {})
+        node = player_nodes.setdefault(info_set, 
+                            Node(info_set, self.num_actions))
 
         strategy = node.get_avg_strategy()
         next_player = (player + 1) % self.num_players
         util = np.zeros(self.num_players)
         for i, action in enumerate(self.actions):
-            next_history = history + action
-            util += self.traverse_tree(next_history, next_player, card) * strategy[i]
+            new_hand = hand.add(player, action)
+            util += self.traverse_tree(next_player, new_hand) * strategy[i]
 
         return util
