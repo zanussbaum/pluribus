@@ -211,7 +211,7 @@ class Hand:
                 return set(['F', 'C', 'R'])
             else:
                 return set(['F', 'C'])
-        return set(['F', 'P', 'R'])
+        return set(['P', 'R'])
         
 
 
