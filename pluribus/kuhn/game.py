@@ -17,7 +17,7 @@ class Hand:
         _history: 2d array/list of str for public betting history
         round: int for which round it is
     """
-    def __init__(self, num_players, num_rounds, cards, num_actions):
+    def __init__(self, json):
         """Initializes the class
 
         Args:
@@ -25,16 +25,16 @@ class Hand:
             num_rounds: int number of max betting rounds
             cards: n-d array of ints for card ordering this hand
         """
-        self.players_in = [True] * num_players
-        self.bets = [1] * num_players
-        self.raises = [False] * num_players
-        self.cards = cards
-        self._history = [[] for _ in range(num_rounds)]
+        self.players_in = [True] * json['num_players']
+        self.bets = [1] * json['num_players']
+        self.raises = [False] * json['num_players']
+        self.cards = json['cards']
+        self._history = [[] for _ in range(json['num_rounds'])]
         self.round = 0
-        self.num_rounds = num_rounds
-        self.num_players = num_players
-        self.num_actions = num_actions
-        self.max_raises = 1
+        self.num_rounds = json['num_rounds']
+        self.num_players = json['num_players']
+        self.num_actions = json['num_actions']
+        self.num_raises = json['num_raises']
 
     def __repr__(self):
         return str(self.history)
@@ -207,23 +207,8 @@ class Hand:
 
         if self.outstanding_bet():
             num_raised = self.raises.count(True)
-            if num_raised < self.max_raises:
+            if num_raised < self.num_raises:
                 return set(['F', 'C', 'R'])
             else:
                 return set(['F', 'C'])
         return set(['P', 'R'])
-        
-
-
-
-if __name__ == '__main__':
-    h = Hand(2, 1, [1,2,3], 2)
-    print(h.history)
-    h.add(0, 'P')
-    print(h.history)
-    print(h.info_set(0))
-    h.add(1, 'B')
-    print(h.history)
-    h.add(0, 'B')
-    print(h.history)
-    print(h.payoff())

@@ -95,29 +95,32 @@ if args.cfr == 0:
 
 elif args.cfr == 1:
     cards = [i for i in range(1, 4)]
-    
-    kuhn_regret = VanillaCFR(2, args.actions, raises=args.raises)
+    settings = {'num_players':2, 'num_actions':args.actions, 
+                'num_raises':args.raises, 'num_rounds':args.rounds}
+    kuhn_regret = VanillaCFR(settings)
     kuhn_regret.train(cards, args.iterations)
     
 elif args.cfr == 2:
     cards = np.array([i for i in range(1, 5)])
-    
-    three_kuhn = VanillaCFR(3, args.actions, raises=args.raises)
+    settings = {'num_players':3, 'num_actions':args.actions, 
+                'num_raises':args.raises, 'num_rounds':args.rounds}
+    three_kuhn = VanillaCFR(settings)
     three_kuhn.train(cards, args.iterations)
 
 elif args.mccfr == 1:
     cards = [i for i in range(1, 4)]
-    TERMINAL = ["PP", "PBP", "PBB", "BP", "BB"]
-    mccfr = MonteCarloCFR(2, args.actions, args.rounds, args.raises)
+    settings = {'num_players':2, 'num_actions':args.actions, 
+                'num_raises':args.raises, 'num_rounds':args.rounds}
 
+    mccfr = MonteCarloCFR(settings)
     mccfr.train(cards, args.iterations)
 
 elif args.mccfr == 2:
     cards = np.array([i for i in range(1, 5)])
-    TERMINAL = ["PPP", "PPBPP", "PPBPB", "PPBBP", "PPBBB", "PBPP",
-            "PBPB", "PBBP", "PBBB", "BPP", "BPB", "BBP", "BBB"
-        ]
-    mccfr = MonteCarloCFR(3, args.actions, args.rounds, args.raises)
+    settings = {'num_players':3, 'num_actions':args.actions, 
+                'num_raises':args.raises, 'num_rounds':args.rounds}
+                
+    mccfr = MonteCarloCFR(settings)
     mccfr.train(cards, args.iterations)
     
 else:

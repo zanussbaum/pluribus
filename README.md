@@ -1,19 +1,19 @@
-# This repo will hold an implementation of Pluribus for a smaller game of poker
+## This repo will hold an implementation of pure Python implementation of Pluribus, Facebook's No-Limit 6-player Hold 'Em Poker Bot.
 
 [Kuhn Poker](https://en.wikipedia.org/wiki/Kuhn_poker) 
 ============
 Kuhn poker is a simplified game of poker where each player is given one card from a set of 3 cards. The third card is set aside. High card wins. We implement a variation of Kuhn poker where the three cards are chose from a set of 5 cards for three players. 
 
 
-Implementation Timeline of Pluribus
+Implementation of Pluribus
 ===================================
 - [X] Implement Kuhn Poker 
-- [ ] Monte Carlo Counterfactual Regret Minimization
+- [X] Monte Carlo Counterfactual Regret Minimization
     * Samples action in game tree rather than traversing entire game tree
     * One player is traverser on each iteration
     * Linear CFR in early iterations
     - [x] Two player Kuhn MCCFR
-    -  [ ] Three player Kuhn MCCFR
+    -  [X] Three player Kuhn MCCFR
     - [ ] Three player multi-round MCCFR
 
 - [ ] Depth Limited Search

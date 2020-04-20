@@ -19,7 +19,7 @@ class VanillaCFR:
         actions: A list of strings of the allowed actions
         node_map: a dictionary of nodes of each information set
     """
-    def __init__(self, num_players, num_actions, **kwargs):
+    def __init__(self, json, **kwargs):
         """Initializes the Vanilla CFR
 
         Creates the object with specified number of players, actions
@@ -31,9 +31,10 @@ class VanillaCFR:
             num_actions: An integer of actions
             terminal: a list of strings of the terminal states in the game
         """
-        self.num_players = num_players
-        self.num_actions = num_actions
-        
+        self.num_players = json['num_players']
+        self.num_actions = json['num_actions']
+        self.num_raises = json['num_raises']
+        self.num_rounds = json['num_rounds']
         if self.num_actions == 2:
             self.actions = ['P', 'B']
             self.actions_mapping = {'P':0, 'B':1}
@@ -41,9 +42,13 @@ class VanillaCFR:
             self.actions = ['F', 'P', 'C', 'R']
             self.actions_mapping = {'F':0, 'P':1, 'C':2, 'R':3}
 
-        if 'raises' in kwargs:
-            self.num_raises = kwargs['raises']
         self.node_map = {}
+
+        self.json = json
+        self.hand_json = {'num_players': json['num_players'], 
+                        'num_actions': json['num_actions'], 
+                        'num_rounds': json['num_rounds'],
+                        'num_raises':json['num_raises']}
 
     def train(self, cards, iterations):
         """Runs CFR and prints the calculated strategies
@@ -55,12 +60,13 @@ class VanillaCFR:
             cards: array-like of ints denoting each card
             iterations: int for number of iterations to run
         """
+        self.hand_json['cards'] = cards
         for _ in range(1, iterations+1):
             if _ % 1000 == 0:
                 print("Iteration {}/{}".format(_, iterations))
             np.random.shuffle(cards)
             prob = tuple(np.ones(self.num_players))
-            hand = Hand(self.num_players, 1, cards, self.num_actions)
+            hand = Hand(self.hand_json)
             self.cfr(0, hand, prob)
 
         expected_utilities = self.expected_utility(cards)
@@ -153,7 +159,8 @@ class VanillaCFR:
 
         expected_utility = np.zeros(self.num_players)
         for card in all_combos:
-            hand = Hand(self.num_players, 1, card, self.num_actions)
+            self.hand_json['cards'] = card
+            hand = Hand(self.hand_json)
             expected_utility += self.traverse_tree(0, hand)
 
         return expected_utility/len(all_combos)

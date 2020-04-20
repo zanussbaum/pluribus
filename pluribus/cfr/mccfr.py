@@ -34,14 +34,12 @@ class MonteCarloCFR(VanillaCFR):
         reverse_mapping: dict of ints to action
     """
     
-    def __init__(self, num_players, num_actions, num_betting_rounds, num_raises, **kwargs):
+    def __init__(self, json, **kwargs):
         """initializes the object
 
         See object attributes for params
         """
-        super().__init__(num_players, num_actions, **kwargs)
-        self.num_betting_rounds = num_betting_rounds
-        self.num_raises = num_raises
+        super().__init__(json, **kwargs)
         self.regret_minimum = -300000
         self.strategy_interval = 100
         self.prune_threshold = 200
@@ -62,12 +60,13 @@ class MonteCarloCFR(VanillaCFR):
             cards: array-like of ints denoting each card
             iterations: int for number of iterations to run
         """
+        self.hand_json['cards'] = cards
         for t in range(1, iterations+1):
             if t % 1000 == 0:
                 print('Iteration {}/{}'.format(t, iterations))
             np.random.shuffle(cards)
             for player in range(self.num_players):
-                hand = Hand(self.num_players, self.num_betting_rounds, cards, self.num_actions)
+                hand = Hand(self.hand_json)
                 if t % self.strategy_interval == 0:
                     self.update_strategy(player, hand)
                 if t > self.prune_threshold:
@@ -250,7 +249,8 @@ class MonteCarloCFR(VanillaCFR):
 
         expected_utility = np.zeros(self.num_players)
         for card in all_combos:
-            hand = Hand(self.num_players, 1, card, self.num_actions)
+            self.hand_json['cards'] = card
+            hand = Hand(self.hand_json)
             expected_utility += self.traverse_tree(0, hand)
 
         return expected_utility/len(all_combos)
@@ -290,7 +290,3 @@ class MonteCarloCFR(VanillaCFR):
                 util += self.traverse_tree(next_player, new_hand) * strategy[i]
 
         return util
-
-
-
-            
