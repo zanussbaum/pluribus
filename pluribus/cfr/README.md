@@ -16,12 +16,13 @@ This file hosts the classes for Information Sets and the base class Node
 
 `mccfr`
 ---
-[Monte Carlo CFR](https://science.sciencemag.org/content/sci/suppl/2019/07/10/science.aay2400.DC1/aay2400-Brown-SM.pdf) (Equilibrium Finding and Algorithm 1) is the algorithm used in Pluribus as the blueprint strategy. This is currently implemented for 2 player Kuhn Poker with actions F (fold) P (pass/check) C (call) R (Raise).
+[Monte Carlo CFR](https://science.sciencemag.org/content/sci/suppl/2019/07/10/science.aay2400.DC1/aay2400-Brown-SM.pdf) (Equilibrium Finding and Algorithm 1) is the algorithm used in Pluribus as the blueprint strategy. This is currently implemented for 2 and 3 player Kuhn Poker with actions 2 (Pass/Bet) and 4 (Fold/Pass/Call/Raise) actions. Again, 4 action multiplayer isn't as accurate as 2 action. 
 
+Generally running both CFR implementations for 10000 iterations is sufficient.
 
 - [x] 2 player Kuhn Poker 
 - [x] 3 player Kuhn Poker
-- [ ] 2 and 3 player 4 action Kuhn Poker 
+- [x] 2 and 3 player 4 action Kuhn Poker 
 - [ ] 2 and 3 player multiround Kuhn Poker
 
 `main`

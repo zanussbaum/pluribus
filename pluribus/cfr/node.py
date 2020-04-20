@@ -54,7 +54,7 @@ class Node(RegretMin):
         return strat
 
     def __repr__(self):
-        return 'info: {} strategy_sum: {} regret: {} strategy: {}'.format(
+        return 'info: {}\n strategy_sum: {}\n regret: {}\n strategy: {}\n'.format(
             self.info_set, self.strategy_sum, self.regret_sum, self.curr_strategy)
 
     def __eq__(self, value):
@@ -76,36 +76,3 @@ class InfoSet(Node):
     def __init__(self, info_set, num_actions, player):
         super().__init__(info_set, num_actions)
         self.player = player
-
-
-    def strategy(self, actions=None):
-        """Calculates the strategy given a player's regrets
-
-        This function is similar to the Node class get_strategy
-        function except that we don't add the probabilities of each action
-        to the strategy_sum like we do in Node since we are running a 
-        Monte Carlo process
-        """
-        strat = np.maximum(self.regret_sum, 0)
-        if actions is not None:
-            # if we are here, we just want to get the conditional probability that we play that prob
-            # this is the case where the opponent is traversing
-            norm_sum = np.array(sum([prob for i, prob in enumerate(strat) if actions[i]]))
-            if norm_sum > 0:
-                strat = np.divide(strat, norm_sum, out=np.zeros_like(strat), where=actions==True)
-            else:
-                num_valid = sum(actions)
-                strat = np.array([1/num_valid if action else 0 for action in actions])
-
-            return strat
-
-        norm_sum = np.sum(strat)
-
-        if norm_sum > 0:
-            strat /= norm_sum
-        else:
-            strat = np.ones(self.actions)/self.actions
-
-        self.curr_strategy = strat
-    
-        return strat

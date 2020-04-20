@@ -47,8 +47,10 @@ class MonteCarloCFR(VanillaCFR):
         self.prune_threshold = 200
         self.discount_interval = 10
         self.lcfr_threshold = 400
-        self.action_mapping = {'P':0, 'B':1}
-        self.reverse_mapping = {0:'P', 1:'B'}
+        if self.num_actions == 2:
+            self.reverse_mapping = {0:'P', 1:'B'}
+        else:
+            self.reverse_mapping = {0:'F', 1:'P', 2:'C', 3:'R'}
 
     def train(self, cards, iterations):
         """Runs MonteCarloCFR and prints the calculated strategies
@@ -65,9 +67,8 @@ class MonteCarloCFR(VanillaCFR):
                 print('Iteration {}/{}'.format(t, iterations))
             np.random.shuffle(cards)
             for player in range(self.num_players):
-                hand = Hand(self.num_players, self.num_betting_rounds, cards)
+                hand = Hand(self.num_players, self.num_betting_rounds, cards, self.num_actions)
                 if t % self.strategy_interval == 0:
-                    #TODO look at this
                     self.update_strategy(player, hand)
                 if t > self.prune_threshold:
                     will_prune = np.random.random()
@@ -95,7 +96,11 @@ class MonteCarloCFR(VanillaCFR):
             for key in sorted(player_info_sets.keys(), key=lambda x: (len(x), x)):
                 node = player_info_sets[key]
                 strategy = node.avg_strategy()
-                print("{}:\t P: {} B: {}".format(key, strategy[0], strategy[1]))
+                if self.num_actions == 2:
+                    print("{}:\t P: {} B: {}".format(key, strategy[0], strategy[1]))
+                else:
+                    print("{}:\t F: {} P: {} C: {} R: {}".format(
+                        key, strategy[0], strategy[1], strategy[2], strategy[3]))
 
 
     def mccfr(self, player, hand, prune=False):
@@ -124,44 +129,46 @@ class MonteCarloCFR(VanillaCFR):
         #     next_history = history + '\n'
         #     #TODO sample cards to deal, then traverse
         #     return self.mccfr(cards, next_history, player)
+        
         elif curr_player == player:
             info_set = hand.info_set(player)
             player_nodes = self.node_map.setdefault(player, {})
             node = player_nodes.setdefault(info_set, 
                             InfoSet(info_set, self.num_actions, player))
 
-            strategy = node.strategy()
             valid_actions = hand.valid_actions()
+            actions_to_sum = [True if a in valid_actions else False for a in self.actions]
+            strategy = node.strategy(actions_to_sum)
 
             expected_value = np.zeros(self.num_players)
             utilities = np.zeros(self.num_actions)
             if prune:
                 explored = set()
 
-            for action in valid_actions:
-                mapping = self.action_mapping[action]
-                if prune:
-                    if node.regret_sum[mapping] > self.regret_minimum:
+            for action, i in self.actions_mapping.items():
+                if action in valid_actions:
+                    if prune:
+                        if node.regret_sum[i] > self.regret_minimum:
+                            new_hand = hand.add(player, action)
+                            calculated_util  = self.mccfr(player, new_hand, prune=True)
+                            utilities[i] = calculated_util[player]
+                            expected_value += calculated_util * strategy[i]
+                            explored.add(action)
+                    else:
                         new_hand = hand.add(player, action)
-                        calculated_util  = self.mccfr(player, new_hand, prune=True)
-                        utilities[mapping] = calculated_util[player]
-                        expected_value += calculated_util * strategy[mapping]
-                        explored.add(action)
-                else:
-                    new_hand = hand.add(player, action)
-                    calculated_util  = self.mccfr(player, new_hand)
-                    utilities[mapping] = calculated_util[player]
-                    expected_value += calculated_util * strategy[mapping]
+                        calculated_util  = self.mccfr(player, new_hand)
+                        utilities[i] = calculated_util[player]
+                        expected_value += calculated_util * strategy[i]
             
-            for action in valid_actions:
-                mapping = self.action_mapping[action]
-                if prune:
-                    if action in explored:
-                        regret = utilities[mapping] - expected_value[player]
-                        node.regret_sum[mapping] += regret
-                else:
-                    regret = utilities[mapping] - expected_value[player]
-                    node.regret_sum[mapping] += regret
+            for action, i in self.actions_mapping.items():
+                if action in valid_actions:
+                    if prune:
+                        if action in explored:
+                            regret = utilities[i] - expected_value[player]
+                            node.regret_sum[i] += regret
+                    else:
+                        regret = utilities[i] - expected_value[player]
+                        node.regret_sum[i] += regret
 
             return expected_value
 
@@ -171,7 +178,9 @@ class MonteCarloCFR(VanillaCFR):
             node = player_nodes.setdefault(info_set, 
                             InfoSet(info_set, self.num_actions, curr_player))
 
-            strategy = node.strategy()
+            valid_actions = hand.valid_actions()
+            actions_to_sum = [True if a in valid_actions else False for a in self.actions]
+            strategy = node.strategy(actions_to_sum)
             choice = np.random.choice(self.num_actions, p=strategy)
             action = self.reverse_mapping[choice]
             new_hand = hand.add(curr_player, action)
@@ -203,7 +212,10 @@ class MonteCarloCFR(VanillaCFR):
             node = player_nodes.setdefault(info_set, 
                             InfoSet(info_set, self.num_actions, player))
 
-            strategy = node.strategy()
+            valid_actions = hand.valid_actions()
+            actions_to_sum = [True if a in valid_actions else False for a in self.actions]
+            strategy = node.strategy(actions_to_sum)
+
             choice = np.random.choice(self.num_actions, p=strategy)
             node.strategy_sum[choice] += 1
             action = self.reverse_mapping[choice]
@@ -212,9 +224,10 @@ class MonteCarloCFR(VanillaCFR):
 
         else:
             valid_actions = hand.valid_actions()
-            for action in valid_actions:
-                new_hand = hand.add(curr_player, action)
-                self.update_strategy(player, new_hand)
+            for action, i in self.actions_mapping.items():
+                if action in valid_actions:
+                    new_hand = hand.add(curr_player, action)
+                    self.update_strategy(player, new_hand)
 
     
     def expected_utility(self, cards):
@@ -237,7 +250,7 @@ class MonteCarloCFR(VanillaCFR):
 
         expected_utility = np.zeros(self.num_players)
         for card in all_combos:
-            hand = Hand(self.num_players, 1, card)
+            hand = Hand(self.num_players, 1, card, self.num_actions)
             expected_utility += self.traverse_tree(0, hand)
 
         return expected_utility/len(all_combos)
@@ -271,9 +284,10 @@ class MonteCarloCFR(VanillaCFR):
         next_player = (player + 1) % self.num_players
         util = np.zeros(self.num_players)
         valid_actions = hand.valid_actions()
-        for i, action in enumerate(valid_actions):
-            new_hand = hand.add(player, action)
-            util += self.traverse_tree(next_player, new_hand) * strategy[i]
+        for action, i in self.actions_mapping.items():
+            if action in valid_actions:
+                new_hand = hand.add(player, action)
+                util += self.traverse_tree(next_player, new_hand) * strategy[i]
 
         return util
 

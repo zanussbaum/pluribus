@@ -107,6 +107,7 @@ class VanillaCFR:
         valid_actions = hand.valid_actions()
         actions_to_sum = [True if a in valid_actions else False for a in self.actions]
         strategy = node.strategy(actions_to_sum, probability[player])
+        
         utilities = np.zeros(self.num_actions)
         next_player = (player + 1) % self.num_players
 

@@ -102,13 +102,13 @@ elif args.cfr == 1:
 elif args.cfr == 2:
     cards = np.array([i for i in range(1, 5)])
     
-    three_kuhn = VanillaCFR(3, args.actions, payoff=three_player_payoff)
+    three_kuhn = VanillaCFR(3, args.actions, raises=args.raises)
     three_kuhn.train(cards, args.iterations)
 
 elif args.mccfr == 1:
     cards = [i for i in range(1, 4)]
     TERMINAL = ["PP", "PBP", "PBB", "BP", "BB"]
-    mccfr = MonteCarloCFR(2, 2, args.rounds, args.raises, terminal=TERMINAL)
+    mccfr = MonteCarloCFR(2, args.actions, args.rounds, args.raises)
 
     mccfr.train(cards, args.iterations)
 
@@ -117,8 +117,7 @@ elif args.mccfr == 2:
     TERMINAL = ["PPP", "PPBPP", "PPBPB", "PPBBP", "PPBBB", "PBPP",
             "PBPB", "PBBP", "PBBB", "BPP", "BPB", "BBP", "BBB"
         ]
-    mccfr = MonteCarloCFR(3, 2, args.rounds, args.raises, terminal=TERMINAL, payoff=three_player_payoff)
-
+    mccfr = MonteCarloCFR(3, args.actions, args.rounds, args.raises)
     mccfr.train(cards, args.iterations)
     
 else:
