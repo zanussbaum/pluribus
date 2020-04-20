@@ -28,22 +28,24 @@ class Node(RegretMin):
         self.curr_strategy = np.zeros(num_actions)
         self.strategy_sum = np.zeros(num_actions)
 
-    def strategy(self, weight=1):
+    def strategy(self, actions, weight=1):
         """Calculates the new strategy based on regrets
 
         Gets the current strategy through regret matching
         Args:
-            weight: float of 
+            actions: boolean list of valid actions
+            weight: float of probability that you are at that info set
         Returns:
             strategy: a numpy array of the current strategy
         """
         strat = np.maximum(self.regret_sum, 0)
-        norm_sum = np.sum(strat)
-
+        norm_sum = np.array(sum([prob for i, prob in enumerate(strat) if actions[i]]))
+    
         if norm_sum > 0:
-            strat /= norm_sum
+            strat = np.divide(strat, norm_sum, out=np.zeros_like(strat), where=np.array(actions))
         else:
-            strat = np.ones(self.actions)/self.actions
+            num_valid = sum(actions)
+            strat= np.array([1/num_valid if action else 0 for action in actions])
 
         self.strategy_sum += strat * weight
 

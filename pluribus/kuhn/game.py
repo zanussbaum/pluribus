@@ -17,7 +17,7 @@ class Hand:
         _history: 2d array/list of str for public betting history
         round: int for which round it is
     """
-    def __init__(self, num_players, num_rounds, cards):
+    def __init__(self, num_players, num_rounds, cards, num_actions):
         """Initializes the class
 
         Args:
@@ -27,11 +27,14 @@ class Hand:
         """
         self.players_in = [True] * num_players
         self.bets = [1] * num_players
+        self.raises = [False] * num_players
         self.cards = cards
         self._history = [[] for _ in range(num_rounds)]
         self.round = 0
         self.num_rounds = num_rounds
         self.num_players = num_players
+        self.num_actions = num_actions
+        self.max_raises = 1
 
     def __repr__(self):
         return str(self.history)
@@ -86,6 +89,8 @@ class Hand:
 
         elif action == 'B' or action == 'R' or action == 'C':
             new_hand.bet(player)
+            if action == 'R' or action == 'B':
+                new_hand.raises[player] = True
 
         elif action == 'P':
             if new_hand.outstanding_bet():
@@ -197,31 +202,22 @@ class Hand:
         return len(current_round) % self.num_players
 
     def valid_actions(self):
-        # TODO
-        return ['P', 'B']
-        """
-        def get_valid_actions(self, history):
-        Gets the valid actions for the current round
+        if self.num_actions == 2:
+            return set(['P', 'B'])
 
-        Args:
-            history: str of public betting history
-        
-        current_round = history.rfind('\n')
-        outstanding_bet = history[current_round:].find('B')
-
-        if outstanding_bet != -1:
-            if history[current_round:].count('R') > self.num_raises:
-                return ['P', 'B']
-            return ['P', 'B']
-        return ['P', 'B']
-        """
-        raise NotImplementedError('TODO')
+        if self.outstanding_bet():
+            num_raised = self.raises.count(True)
+            if num_raised < self.max_raises:
+                return set(['F', 'C', 'R'])
+            else:
+                return set(['F', 'C'])
+        return set(['F', 'P', 'R'])
         
 
 
 
 if __name__ == '__main__':
-    h = Hand(2, 1, [1,2,3])
+    h = Hand(2, 1, [1,2,3], 2)
     print(h.history)
     h.add(0, 'P')
     print(h.history)

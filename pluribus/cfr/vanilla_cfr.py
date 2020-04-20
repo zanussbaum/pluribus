@@ -11,13 +11,12 @@ class VanillaCFR:
     B for bet. We assume that these are akin to checking and raising
     with no outstanding bet and folding and calling wtih an outstanding
     bet. Note that for multiplayer games, CFR is not guaranteed to 
-    converge to a Nash or epsilon Nash Equilibrium. 
+    converge to a Nash or epsilon Nash Equilibrium.
 
     Attributes:
         num_players: An integer of players playing
         num_actions: An integer of actions
         actions: A list of strings of the allowed actions
-        terminal: a list of strings of the terminal states in the game
         node_map: a dictionary of nodes of each information set
     """
     def __init__(self, num_players, num_actions, **kwargs):
@@ -35,10 +34,15 @@ class VanillaCFR:
         self.num_players = num_players
         self.num_actions = num_actions
         
-        if 'actions' not in kwargs:
-            self.actions = [i for i in range(num_actions)]
+        if self.num_actions == 2:
+            self.actions = ['P', 'B']
+            self.actions_mapping = {'P':0, 'B':1}
         else:
-            self.actions = kwargs['actions']
+            self.actions = ['F', 'P', 'C', 'R']
+            self.actions_mapping = {'F':0, 'P':1, 'C':2, 'R':3}
+
+        if 'raises' in kwargs:
+            self.num_raises = kwargs['raises']
         self.node_map = {}
 
     def train(self, cards, iterations):
@@ -51,16 +55,14 @@ class VanillaCFR:
             cards: array-like of ints denoting each card
             iterations: int for number of iterations to run
         """
-
         for _ in range(1, iterations+1):
             if _ % 1000 == 0:
                 print("Iteration {}/{}".format(_, iterations))
             np.random.shuffle(cards)
             prob = tuple(np.ones(self.num_players))
-            hand = Hand(self.num_players, 1, cards)
+            hand = Hand(self.num_players, 1, cards, self.num_actions)
             self.cfr(0, hand, prob)
 
-        
         expected_utilities = self.expected_utility(cards)
         for player in range(self.num_players):
             print("expected utility for player {}: {}".format(
@@ -70,7 +72,11 @@ class VanillaCFR:
             for key in sorted(player_info_sets.keys(), key=lambda x: (len(x), x)):
                 node = player_info_sets[key]
                 strategy = node.avg_strategy()
-                print("{}:\t P: {} B: {}".format(key, strategy[0], strategy[1]))
+                if self.num_actions == 2:
+                    print("{}:\t P: {} B: {}".format(key, strategy[0], strategy[1]))
+                else:
+                    print("{}:\t F: {} P: {} C: {} R: {}".format(
+                        key, strategy[0], strategy[1], strategy[2], strategy[3]))
 
     def cfr(self, player, hand, probability):    
         """Runs the VanillaCFR algorithm
@@ -98,26 +104,31 @@ class VanillaCFR:
         node = player_nodes.setdefault(info_set, 
                             Node(info_set, self.num_actions))
 
-        strategy = node.strategy(probability[player])
+        valid_actions = hand.valid_actions()
+        actions_to_sum = [True if a in valid_actions else False for a in self.actions]
+        strategy = node.strategy(actions_to_sum, probability[player])
         utilities = np.zeros(self.num_actions)
         next_player = (player + 1) % self.num_players
 
         node_util = np.zeros(self.num_players)
-        for i, action in enumerate(self.actions):
-            new_hand = hand.add(player, action)
-            new_prob = tuple(prob if j != player else prob * strategy[i] for j, prob in enumerate(probability))
-            returned_util = self.cfr(next_player, new_hand, new_prob)
-            utilities[i] = returned_util[player]
-            node_util += returned_util * strategy[i]
+        
+        for action, i in self.actions_mapping.items():
+            if action in valid_actions:
+                new_hand = hand.add(player, action)
+                new_prob = tuple(prob if j != player else prob * strategy[i] for j, prob in enumerate(probability))
+                returned_util = self.cfr(next_player, new_hand, new_prob)
+                utilities[i] = returned_util[player]
+                node_util += returned_util * strategy[i]
            
         opp_prob = 1
         for i, prob in enumerate(probability):
             if i != player:
                 opp_prob *= prob
             
-        for i, action in enumerate(self.actions):
-            regret = utilities[i] - node_util[player]
-            node.regret_sum[i] += regret * opp_prob
+        for action, i in self.actions_mapping.items():
+            if action in valid_actions:
+                regret = utilities[i] - node_util[player]
+                node.regret_sum[i] += regret * opp_prob
 
         return node_util
 
@@ -141,7 +152,7 @@ class VanillaCFR:
 
         expected_utility = np.zeros(self.num_players)
         for card in all_combos:
-            hand = Hand(self.num_players, 1, card)
+            hand = Hand(self.num_players, 1, card, self.num_actions)
             expected_utility += self.traverse_tree(0, hand)
 
         return expected_utility/len(all_combos)
@@ -174,8 +185,10 @@ class VanillaCFR:
         strategy = node.avg_strategy()
         next_player = (player + 1) % self.num_players
         util = np.zeros(self.num_players)
-        for i, action in enumerate(self.actions):
-            new_hand = hand.add(player, action)
-            util += self.traverse_tree(next_player, new_hand) * strategy[i]
+        valid_actions = hand.valid_actions()
+        for action, i in self.actions_mapping.items():
+            if action in valid_actions:
+                new_hand = hand.add(player, action)
+                util += self.traverse_tree(next_player, new_hand) * strategy[i]
 
         return util

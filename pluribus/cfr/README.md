@@ -12,7 +12,7 @@ This file hosts the classes for Information Sets and the base class Node
 
 `vanilla_cfr`
 ---
-[Vanilla CFR](http://modelai.gettysburg.edu/2013/cfr/cfr.pdf) (section 3) uses the regret matchin algorithm to calculate an average strategy that *can* converge to a Nash Equilibrium in some scenarios (guaranteed for 2 player games). This implementation of CFR is for 2 and 3 player Kuhn poker where the only actions are P (pass) or B (bet). 
+[Vanilla CFR](http://modelai.gettysburg.edu/2013/cfr/cfr.pdf) (section 3) uses the regret matchin algorithm to calculate an average strategy that *can* converge to a Nash Equilibrium in some scenarios (guaranteed for 2 player games). This implementation of CFR is for 2 and 3 player Kuhn poker. Currently, the 2 action converges for the 3 player Kuhn poker, but the 4 action implementation does not whether it's a bug, lack of guarantee of convergence, or 'magic' (but most likely a bug).  
 
 `mccfr`
 ---
@@ -22,7 +22,7 @@ This file hosts the classes for Information Sets and the base class Node
 - [x] 2 player Kuhn Poker 
 - [x] 3 player Kuhn Poker
 - [ ] 2 and 3 player 4 action Kuhn Poker 
-- [ ] 3 player, multiround Kuhn Poker
+- [ ] 2 and 3 player multiround Kuhn Poker
 
 `main`
 ---

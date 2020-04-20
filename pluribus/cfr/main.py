@@ -82,6 +82,7 @@ parser.add_argument('-i', '--iterations', type=int, help='number of iterations t
 parser.add_argument('-c','--cfr', type=int, help='(0) Run regret min or Run CFR for (1): 2 players or (2): 3 players')
 parser.add_argument('-r', '--rounds', default=1, type=int, help='Number of betting rounds')
 parser.add_argument('-b', '--raises', default=1, type=int, help='Number of raises per round')
+parser.add_argument('-a', '--actions', default=2, type=int, help='Number of actions')
 parser.add_argument('-m', '--mccfr', type=int, help='(1) Run MCCFR for two player kuhn poker or (2) 3 players')
 args = parser.parse_args()
 
@@ -91,26 +92,17 @@ if args.cfr == 0:
     minimization = RegretMin(3, utilities[0], np.array([.4, .3, .3]))
     minimization.train(args.iterations)
     print(minimization.get_avg_strategy())
-elif args.cfr == 1:
-    # kuhn poker 2 player 
-    # 2 actions
-    cards = [i for i in range(1, 4)]
-    ACTIONS = ['P', 'B']
-    TERMINAL = ["PP", "PBP", "PBB", "BP", "BB"]
 
-    kuhn_regret = VanillaCFR(2, 2, terminal=TERMINAL, actions=ACTIONS)
+elif args.cfr == 1:
+    cards = [i for i in range(1, 4)]
+    
+    kuhn_regret = VanillaCFR(2, args.actions, raises=args.raises)
     kuhn_regret.train(cards, args.iterations)
     
 elif args.cfr == 2:
     cards = np.array([i for i in range(1, 5)])
-    ACTIONS = ['P', 'B']
-    TERMINAL = ["PPP", "PPBPP", "PPBPB", "PPBBP", "PPBBB", "PBPP",
-            "PBPB", "PBBP", "PBBB", "BPP", "BPB", "BBP", "BBB"
-        ]
-
-
-    three_kuhn = VanillaCFR(3, 2, terminal=TERMINAL, actions=ACTIONS, payoff=three_player_payoff)
-
+    
+    three_kuhn = VanillaCFR(3, args.actions, payoff=three_player_payoff)
     three_kuhn.train(cards, args.iterations)
 
 elif args.mccfr == 1:
