@@ -33,11 +33,13 @@ elif args.cfr == 1:
         settings['hand_eval'] = leduc_eval
         settings['num_rounds'] = 2
         settings['raise_size'] = [2,4]
+        settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
     else:
         cards = [Card(12, 1), Card(13, 1), Card(14, 1)]
         settings['hand_eval'] = kuhn_eval
         settings['num_rounds'] = 1
         settings['raise_size'] = [1]
+        settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
 
     kuhn_regret = VanillaCFR(settings)
     kuhn_regret.train(cards, args.iterations)
@@ -51,11 +53,13 @@ elif args.cfr == 2:
         settings['hand_eval'] = leduc_eval
         settings['num_rounds'] = 2
         settings['raise_size'] = [2,4]
+        settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
     else:
         cards = [Card(11, 1), Card(12, 1), Card(13, 1), Card(14, 1)]
         settings['hand_eval'] = kuhn_eval
         settings['num_rounds'] = 1
         settings['raise_size'] = [1]
+        settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
 
     three_kuhn = VanillaCFR(settings)
     three_kuhn.train(cards, args.iterations)
@@ -70,11 +74,13 @@ elif args.mccfr == 1:
         settings['hand_eval'] = leduc_eval
         settings['num_rounds'] = 2
         settings['raise_size'] = [2,4]
+        settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
     else:
         cards = [Card(12, 1), Card(13, 1), Card(14, 1)]
         settings['hand_eval'] = kuhn_eval
         settings['num_rounds'] = 1
         settings['raise_size'] = [1]
+        settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
 
     mccfr = MonteCarloCFR(settings)
     mccfr.train(cards, args.iterations)
@@ -89,11 +95,14 @@ elif args.mccfr == 2:
         settings['hand_eval'] = leduc_eval
         settings['num_rounds'] = 2
         settings['raise_size'] = [2,4]
+        settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
     else:
         cards = [Card(11, 1), Card(12, 1), Card(13, 1), Card(14, 1)]
         settings['hand_eval'] = kuhn_eval
         settings['num_rounds'] = 1
         settings['raise_size'] = [1]
+        settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
+        
     mccfr = MonteCarloCFR(settings)
     mccfr.train(cards, args.iterations)
     

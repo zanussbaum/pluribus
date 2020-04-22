@@ -36,6 +36,7 @@ class VanillaCFR:
         self.num_actions = json['num_actions']
         self.num_raises = json['num_raises']
         self.num_rounds = json['num_rounds']
+        self.num_cards = json['num_cards']
         if self.num_actions == 2:
             self.actions = ['P', 'B']
             self.actions_mapping = {'P':0, 'B':1}
@@ -156,7 +157,7 @@ class VanillaCFR:
             array_like: floats that correspond to each players expected
                 utility
         """
-        all_combos = [list(t) for t in set(permutations(cards))]
+        all_combos = [list(t) for t in set(permutations(cards, self.num_cards))]
 
         expected_utility = np.zeros(self.num_players)
         for card in tqdm(all_combos, desc='Calculating expected utility'):

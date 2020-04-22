@@ -1,5 +1,5 @@
 ## This folder hosts different variants of CFR
-### Based on the number of hand possibilities, the number of iterations varies per game. For example, CFR can be run for 2 and 3 player Kuhn poker and 2 and 3 player Leduc Poker for around 10,000 iterations and achieve reliable results. MCCFR achieves similar results except for 3 player Leduc Poker. In 3 player Leduc, there are 8! (40,320) ways for the cards to be arranged so running a Monte Carlo simulation for only 10,000 iterations may not reach every state of the game. It's suggested you run Leduc Poker for min 100,000 iterations. 
+### Based on the number of hand possibilities, the number of iterations varies per game. For example, CFR can be run for 2 and 3 player Kuhn poker and 2 and 3 player Leduc Poker for around 10,000 iterations and achieve reliable results. MCCFR achieves similar results except for 3 player Leduc Poker. In 3 player Leduc, there are 8C4 * 4! (1680) ways for the cards to be arranged so running a Monte Carlo simulation for only 10,000 iterations may not reach every state of the game. It's suggested you run Leduc Poker for min 80,000 iterations. 
 
 `node`
 ---

@@ -233,7 +233,7 @@ class MonteCarloCFR(VanillaCFR):
             array_like: floats that correspond to each players expected
                 utility
         """
-        all_combos = [list(t) for t in set(permutations(cards))]
+        all_combos = [list(t) for t in set(permutations(cards, self.num_cards))]
 
         expected_utility = np.zeros(self.num_players)
         for card in tqdm(all_combos):
