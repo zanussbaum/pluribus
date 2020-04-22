@@ -2,7 +2,8 @@ import numpy as np
 from itertools import permutations
 from pluribus.cfr.vanilla_cfr import VanillaCFR
 from pluribus.cfr.node import InfoSet
-from pluribus.kuhn.game import Hand
+from pluribus.game.hand import Hand
+from tqdm import tqdm
 class MonteCarloCFR(VanillaCFR):
     """An object to run Monte Carlo Counter Factual Regret 
 
@@ -61,9 +62,7 @@ class MonteCarloCFR(VanillaCFR):
             iterations: int for number of iterations to run
         """
         self.hand_json['cards'] = cards
-        for t in range(1, iterations+1):
-            if t % 1000 == 0:
-                print('Iteration {}/{}'.format(t, iterations))
+        for t in tqdm(range(1, iterations+1), desc='Training'):
             np.random.shuffle(cards)
             for player in range(self.num_players):
                 hand = Hand(self.hand_json)
@@ -114,22 +113,13 @@ class MonteCarloCFR(VanillaCFR):
         Returns:
             array_like: float of expected utilities
         """
-        curr_player = hand.which_player()
         if hand.is_terminal():
             utility = hand.payoff()
             return np.array(utility)
 
-        #TODO what do we do here?
-        # elif self.is_not_in(history, player):
-        #     next_history = history + '-'
-        #     return self.mccfr(cards, next_history, player)
-
-        # elif self.is_chance(history):
-        #     next_history = history + '\n'
-        #     #TODO sample cards to deal, then traverse
-        #     return self.mccfr(cards, next_history, player)
+        curr_player = hand.which_player()
         
-        elif curr_player == player:
+        if curr_player == player:
             info_set = hand.info_set(player)
             player_nodes = self.node_map.setdefault(player, {})
             node = player_nodes.setdefault(info_set, 
@@ -199,13 +189,11 @@ class MonteCarloCFR(VanillaCFR):
             history: str of public betting history
             player: int of which player we are updating
         """
-
-        #TODO add if hand is after first round
-        curr_player = hand.which_player()
         if hand.is_terminal():
             return
-
-        elif curr_player == player:
+        
+        curr_player = hand.which_player()
+        if curr_player == player:
             info_set = hand.info_set(player)
             player_nodes = self.node_map.setdefault(player, {})
             node = player_nodes.setdefault(info_set, 
@@ -223,7 +211,7 @@ class MonteCarloCFR(VanillaCFR):
 
         else:
             valid_actions = hand.valid_actions()
-            for action, i in self.actions_mapping.items():
+            for action, _ in self.actions_mapping.items():
                 if action in valid_actions:
                     new_hand = hand.add(curr_player, action)
                     self.update_strategy(player, new_hand)
@@ -245,18 +233,18 @@ class MonteCarloCFR(VanillaCFR):
             array_like: floats that correspond to each players expected
                 utility
         """
-        all_combos = [np.array(t) for t in set(permutations(cards))]
+        all_combos = [list(t) for t in set(permutations(cards))]
 
         expected_utility = np.zeros(self.num_players)
-        for card in all_combos:
+        for card in tqdm(all_combos):
             self.hand_json['cards'] = card
             hand = Hand(self.hand_json)
-            expected_utility += self.traverse_tree(0, hand)
+            expected_utility += self.traverse_tree(hand)
 
         return expected_utility/len(all_combos)
 
 
-    def traverse_tree(self, player, hand):
+    def traverse_tree(self, hand):
         """Helper funtion that traverses the tree to calculate expected utility
 
         Calculates the strategy profile from the average strategy 
@@ -274,19 +262,24 @@ class MonteCarloCFR(VanillaCFR):
         if hand.is_terminal():
             utility = hand.payoff()
             return np.array(utility)
+        try:
+            player = hand.which_player()
+            info_set = hand.info_set(player)
+            player_nodes = self.node_map[player]
+            node = player_nodes[info_set]
+        
 
-        info_set = hand.info_set(player)
-        player_nodes = self.node_map.setdefault(player, {})
-        node = player_nodes.setdefault(info_set, 
-                            InfoSet(info_set, self.num_actions, player))
+            strategy = node.avg_strategy()
+            util = np.zeros(self.num_players)
+            valid_actions = hand.valid_actions()
+            for action, i in self.actions_mapping.items():
+                if action in valid_actions:
+                    new_hand = hand.add(player, action)
+                    util += self.traverse_tree(new_hand) * strategy[i]
 
-        strategy = node.avg_strategy()
-        next_player = (player + 1) % self.num_players
-        util = np.zeros(self.num_players)
-        valid_actions = hand.valid_actions()
-        for action, i in self.actions_mapping.items():
-            if action in valid_actions:
-                new_hand = hand.add(player, action)
-                util += self.traverse_tree(next_player, new_hand) * strategy[i]
+            return util
 
-        return util
+        except:
+            raise UserWarning("\nUnexplored information set: {}\
+                \nYou may need to train for more iterations to reach all possible states".format(info_set))
+            

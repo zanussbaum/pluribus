@@ -31,10 +31,13 @@ class Hand:
         self.cards = json['cards']
         self._history = [[] for _ in range(json['num_rounds'])]
         self.round = 0
+        self.turn = 0
         self.num_rounds = json['num_rounds']
         self.num_players = json['num_players']
         self.num_actions = json['num_actions']
         self.num_raises = json['num_raises']
+        self.eval = json['hand_eval']
+        self.raise_size = json['raise_size']
 
     def __repr__(self):
         return str(self.history)
@@ -55,14 +58,14 @@ class Hand:
             setattr(result, k, deepcopy(v, memo))
         return result
 
-    def bet(self, player, amount=1):
+    def bet(self, player):
         """Increment the amount a player has bet by 'amount'"
 
         Args:
             player: int which player has bet
             amount: int how much they have bet
         """
-        self.bets[player] += amount
+        self.bets[player] += self.raise_size[self.round]
 
     @property
     def history(self):
@@ -96,6 +99,9 @@ class Hand:
             if new_hand.outstanding_bet():
                 new_hand.players_in[player] = False
 
+        elif action == '-':
+            assert self.players_in[player] == False
+
         new_hand.handle_round()
         return new_hand
 
@@ -109,7 +115,13 @@ class Hand:
             info_set: a str of the information set
         """
         card = self.cards[player]
-        info_set = str(card) + " || " + str(self.history)
+        if self.round > 0:
+            board_cards = self.cards[self.num_players]
+            info_set = str(card) + " || " + str(board_cards) + ' || ' + str(self.history)
+
+        else:
+            info_set = str(card) + " || " + str(self.history)
+
 
         return info_set
 
@@ -125,6 +137,15 @@ class Hand:
         if self.round < self.num_rounds:
             return False
     
+        min_actions = self.players_in.count(True)
+        actions_in_round = len(self.history[-1])
+
+        if actions_in_round >= min_actions and self.all_called_or_folded():
+            return True
+        
+        return False
+
+    def is_chance(self):
         min_actions = self.players_in.count(True)
         actions_in_round = len(self.history[-1])
 
@@ -163,9 +184,21 @@ class Hand:
         """
         min_actions = self.players_in.count(True)
         actions_in_round = len(self.history[self.round])
-
+        
+       
         if actions_in_round >= min_actions and self.all_called_or_folded():
             self.round += 1
+            if self.round == self.num_rounds:
+                # we are at a terminal state
+                return
+            player = 0
+        else:
+            player = (self.turn + 1) % self.num_players
+
+        while not self.players_in[player]:
+            player = (player + 1) % self.num_players
+
+        self.turn = player
 
     def payoff(self):
         """Calculates the payoff of a terminal state
@@ -178,14 +211,16 @@ class Hand:
         if self.players_in.count(True) == 1:
             winners = [i for i, _ in enumerate(self.players_in) if self.players_in[i]]
         else:
+            board_cards = self.cards[self.num_players:self.num_players+self.round-1]
+            hand_scores = [self.eval(self.cards[i], board_cards) for i in range(self.num_players)]
             winners = []
-            high_card = -1
-            for i, card in enumerate(self.cards[:-1]):
+            high_score = -1
+            for i, score in enumerate(hand_scores):
                 if self.players_in[i]:
-                    if len(winners) == 0 or card > high_card:
+                    if len(winners) == 0 or score > high_score:
                         winners = [i]
-                        high_card = card
-                    elif card == high_card:
+                        high_score = score
+                    elif score == high_score:
                         winners.append(i)
 
         pot = sum(self.bets)
@@ -198,8 +233,7 @@ class Hand:
         return payoffs
 
     def which_player(self):
-        current_round = self.history[-1]
-        return len(current_round) % self.num_players
+        return self.turn
 
     def valid_actions(self):
         if self.num_actions == 2:

@@ -13,8 +13,8 @@ Implementation of Pluribus
     * One player is traverser on each iteration
     * Linear CFR in early iterations
     - [x] Two player Kuhn MCCFR
-    -  [X] Three player Kuhn MCCFR
-    - [ ] Three player multi-round MCCFR
+    - [x] Three player Kuhn MCCFR
+    - [x] Three player Leduc MCCFR
 
 - [ ] Depth Limited Search
     * Plays blueprint strategy in the first betting round

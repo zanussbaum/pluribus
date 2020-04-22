@@ -1,4 +1,5 @@
-# This folder hosts different variants of CFR
+## This folder hosts different variants of CFR
+### Based on the number of hand possibilities, the number of iterations varies per game. For example, CFR can be run for 2 and 3 player Kuhn poker and 2 and 3 player Leduc Poker for around 10,000 iterations and achieve reliable results. MCCFR achieves similar results except for 3 player Leduc Poker. In 3 player Leduc, there are 8! (40,320) ways for the cards to be arranged so running a Monte Carlo simulation for only 10,000 iterations may not reach every state of the game. It's suggested you run Leduc Poker for min 100,000 iterations. 
 
 `node`
 ---
@@ -7,8 +8,6 @@ This file hosts the classes for Information Sets and the base class Node
 `regret_min`
 ---
 [Regret Minimization](http://modelai.gettysburg.edu/2013/cfr/cfr.pdf) (found in section 2) algorithm implemented here. Through regret matching, minimize regrets and create an average strategy that minimizes regrets over time
-
-
 
 `vanilla_cfr`
 ---
@@ -23,7 +22,7 @@ Generally running both CFR implementations for 10000 iterations is sufficient.
 - [x] 2 player Kuhn Poker 
 - [x] 3 player Kuhn Poker
 - [x] 2 and 3 player 4 action Kuhn Poker 
-- [ ] 2 and 3 player multiround Kuhn Poker
+- [x] 2 and 3 player Leduc Hold 'Em
 
 `main`
 ---

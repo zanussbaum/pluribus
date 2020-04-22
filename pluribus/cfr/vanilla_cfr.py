@@ -1,7 +1,8 @@
 import numpy as np
 from pluribus.cfr.node import Node
 from itertools import permutations
-from pluribus.kuhn.game import Hand
+from pluribus.game.hand import Hand
+from tqdm import tqdm
 
 class VanillaCFR:
     """An object to run Vanilla Counterfactual regret on Kuhn poker, or other games
@@ -48,7 +49,9 @@ class VanillaCFR:
         self.hand_json = {'num_players': json['num_players'], 
                         'num_actions': json['num_actions'], 
                         'num_rounds': json['num_rounds'],
-                        'num_raises':json['num_raises']}
+                        'num_raises':json['num_raises'], 
+                        'hand_eval':json['hand_eval'],
+                        'raise_size':json['raise_size']}
 
     def train(self, cards, iterations):
         """Runs CFR and prints the calculated strategies
@@ -61,13 +64,11 @@ class VanillaCFR:
             iterations: int for number of iterations to run
         """
         self.hand_json['cards'] = cards
-        for _ in range(1, iterations+1):
-            if _ % 1000 == 0:
-                print("Iteration {}/{}".format(_, iterations))
+        for _ in tqdm(range(1, iterations+1), desc='Training'):
             np.random.shuffle(cards)
             prob = tuple(np.ones(self.num_players))
             hand = Hand(self.hand_json)
-            self.cfr(0, hand, prob)
+            self.cfr(hand, prob)
 
         expected_utilities = self.expected_utility(cards)
         for player in range(self.num_players):
@@ -84,7 +85,7 @@ class VanillaCFR:
                     print("{}:\t F: {} P: {} C: {} R: {}".format(
                         key, strategy[0], strategy[1], strategy[2], strategy[3]))
 
-    def cfr(self, player, hand, probability):    
+    def cfr(self, hand, probability):    
         """Runs the VanillaCFR algorithm
 
         Calculates the regret for each information set
@@ -105,6 +106,7 @@ class VanillaCFR:
             utility = hand.payoff()
             return np.array(utility)
 
+        player = hand.which_player()
         info_set = hand.info_set(player)
         player_nodes = self.node_map.setdefault(player, {})
         node = player_nodes.setdefault(info_set, 
@@ -115,7 +117,6 @@ class VanillaCFR:
         strategy = node.strategy(actions_to_sum, probability[player])
         
         utilities = np.zeros(self.num_actions)
-        next_player = (player + 1) % self.num_players
 
         node_util = np.zeros(self.num_players)
         
@@ -123,7 +124,7 @@ class VanillaCFR:
             if action in valid_actions:
                 new_hand = hand.add(player, action)
                 new_prob = tuple(prob if j != player else prob * strategy[i] for j, prob in enumerate(probability))
-                returned_util = self.cfr(next_player, new_hand, new_prob)
+                returned_util = self.cfr(new_hand, new_prob)
                 utilities[i] = returned_util[player]
                 node_util += returned_util * strategy[i]
            
@@ -155,18 +156,18 @@ class VanillaCFR:
             array_like: floats that correspond to each players expected
                 utility
         """
-        all_combos = [np.array(t) for t in set(permutations(cards))]
+        all_combos = [list(t) for t in set(permutations(cards))]
 
         expected_utility = np.zeros(self.num_players)
-        for card in all_combos:
+        for card in tqdm(all_combos, desc='Calculating expected utility'):
             self.hand_json['cards'] = card
             hand = Hand(self.hand_json)
-            expected_utility += self.traverse_tree(0, hand)
+            expected_utility += self.traverse_tree(hand)
 
         return expected_utility/len(all_combos)
 
 
-    def traverse_tree(self, player, hand):
+    def traverse_tree(self, hand):
         """Helper funtion that traverses the tree to calculate expected utility
 
         Calculates the strategy profile from the average strategy 
@@ -185,18 +186,17 @@ class VanillaCFR:
             utility = hand.payoff()
             return np.array(utility)
 
+        player = hand.which_player()
         info_set = hand.info_set(player)
-        player_nodes = self.node_map.setdefault(player, {})
-        node = player_nodes.setdefault(info_set, 
-                            Node(info_set, self.num_actions))
+        player_nodes = self.node_map[player]
+        node = player_nodes[info_set]
 
         strategy = node.avg_strategy()
-        next_player = (player + 1) % self.num_players
         util = np.zeros(self.num_players)
         valid_actions = hand.valid_actions()
         for action, i in self.actions_mapping.items():
             if action in valid_actions:
                 new_hand = hand.add(player, action)
-                util += self.traverse_tree(next_player, new_hand) * strategy[i]
+                util += self.traverse_tree(new_hand) * strategy[i]
 
         return util
