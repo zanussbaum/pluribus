@@ -39,10 +39,8 @@ class VanillaCFR:
         self.num_cards = json['num_cards']
         if self.num_actions == 2:
             self.actions = ['P', 'B']
-            self.actions_mapping = {'P':0, 'B':1}
         else:
             self.actions = ['F', 'P', 'C', 'R']
-            self.actions_mapping = {'F':0, 'P':1, 'C':2, 'R':3}
 
         self.node_map = {}
 
@@ -81,10 +79,10 @@ class VanillaCFR:
                 node = player_info_sets[key]
                 strategy = node.avg_strategy()
                 if self.num_actions == 2:
-                    print("{}:\t P: {} B: {}".format(key, strategy[0], strategy[1]))
+                    print("{}:\t P: {} B: {}".format(key, strategy['P'], strategy['B']))
                 else:
                     print("{}:\t F: {} P: {} C: {} R: {}".format(
-                        key, strategy[0], strategy[1], strategy[2], strategy[3]))
+                        key, strategy['F'], strategy['P'], strategy['C'], strategy['R']))
 
     def cfr(self, hand, probability):    
         """Runs the VanillaCFR algorithm
@@ -111,33 +109,33 @@ class VanillaCFR:
         info_set = hand.info_set(player)
         player_nodes = self.node_map.setdefault(player, {})
         node = player_nodes.setdefault(info_set, 
-                            Node(info_set, self.num_actions))
+                            Node(info_set, self.actions))
 
         valid_actions = hand.valid_actions()
-        actions_to_sum = [True if a in valid_actions else False for a in self.actions]
-        strategy = node.strategy(actions_to_sum, probability[player])
+        strategy = node.strategy(valid_actions, probability[player])
         
-        utilities = np.zeros(self.num_actions)
+        utilities = {action:0 for action in valid_actions}
 
         node_util = np.zeros(self.num_players)
         
-        for action, i in self.actions_mapping.items():
-            if action in valid_actions:
-                new_hand = hand.add(player, action)
-                new_prob = tuple(prob if j != player else prob * strategy[i] for j, prob in enumerate(probability))
+        #may need to change this to valid actions in info set?
+        for a in self.actions:
+            if a in valid_actions:
+                new_hand = hand.add(player, a)
+                new_prob = tuple(prob if j != player else prob * strategy[a] for j, prob in enumerate(probability))
                 returned_util = self.cfr(new_hand, new_prob)
-                utilities[i] = returned_util[player]
-                node_util += returned_util * strategy[i]
+                utilities[a] = returned_util[player]
+                node_util += returned_util * strategy[a]
            
         opp_prob = 1
         for i, prob in enumerate(probability):
             if i != player:
                 opp_prob *= prob
             
-        for action, i in self.actions_mapping.items():
-            if action in valid_actions:
-                regret = utilities[i] - node_util[player]
-                node.regret_sum[i] += regret * opp_prob
+        for a in self.actions:
+            if a in valid_actions:
+                regret = utilities[a] - node_util[player]
+                node.regret_sum[a] += regret * opp_prob
 
         return node_util
 
@@ -195,9 +193,9 @@ class VanillaCFR:
         strategy = node.avg_strategy()
         util = np.zeros(self.num_players)
         valid_actions = hand.valid_actions()
-        for action, i in self.actions_mapping.items():
-            if action in valid_actions:
-                new_hand = hand.add(player, action)
-                util += self.traverse_tree(new_hand) * strategy[i]
+        for a in self.actions:
+            if a in valid_actions:
+                new_hand = hand.add(player, a)
+                util += self.traverse_tree(new_hand) * strategy[a]
 
         return util

@@ -21,12 +21,12 @@ class Node(RegretMin):
         strategy: a numpy array of probability distributions for each strategy
         strategy_sum: a numpy array of counts for each time you play an action
     """
-    def __init__(self, info_set, num_actions):
+    def __init__(self, info_set, actions):
         self.info_set = info_set
-        self.actions = num_actions
-        self.regret_sum = np.zeros(num_actions)
-        self.curr_strategy = np.zeros(num_actions)
-        self.strategy_sum = np.zeros(num_actions)
+        self.actions = actions
+        self.regret_sum = {action:0 for action in actions}
+        self.curr_strategy = {action:0 for action in actions}
+        self.strategy_sum = {action:0 for action in actions}
 
     def strategy(self, actions, weight=1):
         """Calculates the new strategy based on regrets
@@ -38,20 +38,31 @@ class Node(RegretMin):
         Returns:
             strategy: a numpy array of the current strategy
         """
-        strat = np.maximum(self.regret_sum, 0)
-        norm_sum = np.array(sum([prob for i, prob in enumerate(strat) if actions[i]]))
+        strat = {action:max(value, 0) for action, value in self.regret_sum.items()}
+        norm_sum = sum([value for key, value in strat.items() if key in actions])
     
         if norm_sum > 0:
-            strat = np.divide(strat, norm_sum, out=np.zeros_like(strat), where=np.array(actions))
+            strat = dict((key, strat[key]/norm_sum) if key in actions else (key, 0) for key in strat.keys())
         else:
-            num_valid = sum(actions)
-            strat= np.array([1/num_valid if action else 0 for action in actions])
+            num_valid = len(actions)
+            strat = dict((key, 1/num_valid) if key in actions else (key, 0) for key in strat.keys())
 
-        self.strategy_sum += strat * weight
+        self.strategy_sum = {key: value + strat[key] * weight for key, value in self.strategy_sum.items()}
 
         self.curr_strategy = strat
 
         return strat
+
+    def avg_strategy(self):
+        avg_strategy = {action:0 for action in self.actions}
+        norm_sum = sum([value for key, value in self.strategy_sum.items()])
+
+        if norm_sum > 0:
+            avg_strategy = dict((key, self.strategy_sum[key]/norm_sum) for key in self.strategy_sum.keys())
+        else:
+            avg_strategy = dict((key, 1/len(self.actions)) for key in self.strategy_sum.keys())
+
+        return avg_strategy
 
     def __repr__(self):
         return 'info: {}\n strategy_sum: {}\n regret: {}\n strategy: {}\n'.format(
@@ -76,3 +87,4 @@ class InfoSet(Node):
     def __init__(self, info_set, num_actions, player):
         super().__init__(info_set, num_actions)
         self.player = player
+        self.is_frozen = False
