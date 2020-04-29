@@ -7,8 +7,6 @@ from pluribus.game.card import Card
 from pluribus.game.hand import Hand, HoldemHand
 from pluribus.game.hand_eval import kuhn_eval, leduc_eval
 
-# add poker hand to leduc holdem and use other hand when applicable
-
 
 parser = argparse.ArgumentParser(description='Counterfactual Regret Minimization')
 parser.add_argument('-i', '--iterations', type=int, help='number of iterations to run for.')
