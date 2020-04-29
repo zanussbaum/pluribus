@@ -3,7 +3,6 @@ import random
 from itertools import permutations
 from pluribus.cfr.vanilla_cfr import VanillaCFR
 from pluribus.cfr.node import InfoSet
-from pluribus.game.hand import Hand
 from tqdm import tqdm
 
 class MonteCarloCFR(VanillaCFR):
@@ -48,11 +47,7 @@ class MonteCarloCFR(VanillaCFR):
         self.prune_threshold = 200
         self.discount_interval = 10
         self.lcfr_threshold = 400
-        if self.num_actions == 2:
-            self.reverse_mapping = {0:'P', 1:'B'}
-        else:
-            self.reverse_mapping = {0:'F', 1:'P', 2:'C', 3:'R'}
-
+        
     def train(self, cards, iterations):
         """Runs MonteCarloCFR and prints the calculated strategies
         
@@ -67,7 +62,7 @@ class MonteCarloCFR(VanillaCFR):
         for t in tqdm(range(1, iterations+1), desc='Training'):
             np.random.shuffle(cards)
             for player in range(self.num_players):
-                hand = Hand(self.hand_json)
+                hand = self.hand(self.hand_json)
                 if t % self.strategy_interval == 0:
                     self.update_strategy(player, hand)
                 if t > self.prune_threshold:
@@ -96,11 +91,15 @@ class MonteCarloCFR(VanillaCFR):
             for key in sorted(player_info_sets.keys(), key=lambda x: (len(x), x)):
                 node = player_info_sets[key]
                 strategy = node.avg_strategy()
-                if self.num_actions == 2:
-                    print("{}:\t P: {} B: {}".format(key, strategy['P'], strategy['B']))
+                if self.json['game'] == 'kuhn':
+                    if self.num_actions == 2:
+                        print("{}:\t P: {} B: {}".format(key, strategy['P'], strategy['B']))
+                    else:
+                        print("{}:\t F: {} P: {} C: {} R: {}".format(
+                            key, strategy['F'], strategy['P'], strategy['C'], strategy['R']))
+
                 else:
-                    print("{}:\t F: {} P: {} C: {} R: {}".format(
-                        key, strategy['F'], strategy['P'], strategy['C'], strategy['R']))
+                    print("{}:\t F: {} C: {} R: {}".format(key, strategy['F'], strategy['C'], strategy['R']))
 
 
     def mccfr(self, player, hand, prune=False):
@@ -239,7 +238,7 @@ class MonteCarloCFR(VanillaCFR):
         expected_utility = np.zeros(self.num_players)
         for card in tqdm(all_combos):
             self.hand_json['cards'] = card
-            hand = Hand(self.hand_json)
+            hand = self.hand(self.hand_json)
             expected_utility += self.traverse_tree(hand)
 
         return expected_utility/len(all_combos)

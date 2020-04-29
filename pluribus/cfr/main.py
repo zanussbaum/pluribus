@@ -4,13 +4,15 @@ from pluribus.cfr.regret_min import RegretMin
 from pluribus.cfr.vanilla_cfr import VanillaCFR
 from pluribus.cfr.mccfr import MonteCarloCFR
 from pluribus.game.card import Card
+from pluribus.game.hand import Hand, HoldemHand
 from pluribus.game.hand_eval import kuhn_eval, leduc_eval
+
+# add poker hand to leduc holdem and use other hand when applicable
 
 
 parser = argparse.ArgumentParser(description='Counterfactual Regret Minimization')
 parser.add_argument('-i', '--iterations', type=int, help='number of iterations to run for.')
 parser.add_argument('-c','--cfr', type=int, help='(0) Run regret min or Run CFR for (1): 2 players or (2): 3 players')
-parser.add_argument('-r', '--rounds', default=1, type=int, help='Number of betting rounds')
 parser.add_argument('-b', '--raises', default=1, type=int, help='Number of raises per round')
 parser.add_argument('-a', '--actions', default=2, type=int, help='Number of actions')
 parser.add_argument('-g', '--game', type=int, default=0, help='Game to run (0) Kuhn or (1) Leduc')
@@ -25,83 +27,116 @@ if args.cfr == 0:
     print(minimization.avg_strategy())
 
 elif args.cfr == 1:
-    settings = {'num_players':2, 'num_actions':args.actions, 
-                'num_raises':args.raises}
+    settings = {'num_players':2}
 
     if args.game == 1:
         cards = [Card(12, 1), Card(13, 1), Card(14, 1), Card(12, 2), Card(13, 2), Card(14, 2)]
+        settings['num_actions'] = 3
         settings['hand_eval'] = leduc_eval
         settings['num_rounds'] = 2
+        settings['num_raises'] = 2
         settings['raise_size'] = [2,4]
+        settings['num_actions'] = 3
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
+        settings['game'] = 'leduc'
+        settings['hand'] = HoldemHand
     else:
         cards = [Card(12, 1), Card(13, 1), Card(14, 1)]
         settings['hand_eval'] = kuhn_eval
         settings['num_rounds'] = 1
+        settings['num_raises'] = 1
+        settings['num_actions'] = args.actions
         settings['raise_size'] = [1]
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
+        settings['game'] = 'kuhn'
+        settings['hand'] = Hand
+        
 
     kuhn_regret = VanillaCFR(settings)
     kuhn_regret.train(cards, args.iterations)
     
 elif args.cfr == 2:
-    settings = {'num_players':3, 'num_actions':args.actions, 
-                'num_raises':args.raises}
+    settings = {'num_players':3}
 
     if args.game == 1:
         cards = [Card(11, 1), Card(12, 1), Card(13, 1), Card(14, 1), Card(11, 2), Card(12, 2), Card(13, 2), Card(14, 2)]
+        settings['num_actions'] = 3
         settings['hand_eval'] = leduc_eval
         settings['num_rounds'] = 2
+        settings['num_raises'] = 2
         settings['raise_size'] = [2,4]
+        settings['num_actions'] = 3
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
+        settings['game'] = 'leduc'
+        settings['hand'] = HoldemHand
     else:
         cards = [Card(11, 1), Card(12, 1), Card(13, 1), Card(14, 1)]
         settings['hand_eval'] = kuhn_eval
         settings['num_rounds'] = 1
+        settings['num_raises'] = 1
+        settings['num_actions'] = args.actions
         settings['raise_size'] = [1]
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
+        settings['game'] = 'kuhn'
+        settings['hand'] = Hand
 
     three_kuhn = VanillaCFR(settings)
     three_kuhn.train(cards, args.iterations)
 
 elif args.mccfr == 1:
     cards = [i for i in range(1, 4)]
-    settings = {'num_players':2, 'num_actions':args.actions, 
-                'num_raises':args.raises, 'num_rounds':args.rounds}
+    settings = {'num_players':2}
 
     if args.game == 1:
         cards = [Card(12, 1), Card(13, 1), Card(14, 1), Card(12, 2), Card(13, 2), Card(14, 2)]
+        settings['num_actions'] = 3
         settings['hand_eval'] = leduc_eval
         settings['num_rounds'] = 2
+        settings['num_raises'] = 2
         settings['raise_size'] = [2,4]
+        settings['num_actions'] = 3
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
+        settings['game'] = 'leduc'
+        settings['hand'] = HoldemHand
     else:
         cards = [Card(12, 1), Card(13, 1), Card(14, 1)]
         settings['hand_eval'] = kuhn_eval
         settings['num_rounds'] = 1
+        settings['num_raises'] = 1
+        settings['num_actions'] = args.actions
         settings['raise_size'] = [1]
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
+        settings['game'] = 'kuhn'
+        settings['hand'] = Hand
 
     mccfr = MonteCarloCFR(settings)
     mccfr.train(cards, args.iterations)
 
 elif args.mccfr == 2:
     cards = np.array([i for i in range(1, 5)])
-    settings = {'num_players':3, 'num_actions':args.actions, 
-                'num_raises':args.raises, 'num_rounds':args.rounds}
+    settings = {'num_players':3}
                 
     if args.game == 1:
         cards = [Card(11, 1), Card(12, 1), Card(13, 1), Card(14, 1), Card(11, 2), Card(12, 2), Card(13, 2), Card(14, 2)]
+        settings['num_actions'] = 3
         settings['hand_eval'] = leduc_eval
         settings['num_rounds'] = 2
+        settings['num_raises'] = 2
         settings['raise_size'] = [2,4]
+        settings['num_actions'] = 3
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
+        settings['game'] = 'leduc'
+        settings['hand'] = HoldemHand
     else:
         cards = [Card(11, 1), Card(12, 1), Card(13, 1), Card(14, 1)]
         settings['hand_eval'] = kuhn_eval
         settings['num_rounds'] = 1
+        settings['num_raises'] = 1
+        settings['num_actions'] = args.actions
         settings['raise_size'] = [1]
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
+        settings['game'] = 'kuhn'
+        settings['hand'] = Hand
         
     mccfr = MonteCarloCFR(settings)
     mccfr.train(cards, args.iterations)

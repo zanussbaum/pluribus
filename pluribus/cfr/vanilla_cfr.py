@@ -1,7 +1,8 @@
 import numpy as np
+import importlib
+import sys
 from pluribus.cfr.node import Node
 from itertools import permutations
-from pluribus.game.hand import Hand
 from tqdm import tqdm
 
 class VanillaCFR:
@@ -37,11 +38,16 @@ class VanillaCFR:
         self.num_raises = json['num_raises']
         self.num_rounds = json['num_rounds']
         self.num_cards = json['num_cards']
-        if self.num_actions == 2:
-            self.actions = ['P', 'B']
+        self.hand = json['hand']
+        if json['game'] == 'kuhn':
+            if self.num_actions == 2:
+                self.actions = ['P', 'B']
+            else:
+                self.actions = ['F', 'P', 'C', 'R']
         else:
-            self.actions = ['F', 'P', 'C', 'R']
-
+            if json['game'] == 'leduc':
+                self.actions = ['F', 'C', 'R']
+                
         self.node_map = {}
 
         self.json = json
@@ -66,7 +72,7 @@ class VanillaCFR:
         for _ in tqdm(range(1, iterations+1), desc='Training'):
             np.random.shuffle(cards)
             prob = tuple(np.ones(self.num_players))
-            hand = Hand(self.hand_json)
+            hand = self.hand(self.hand_json)
             self.cfr(hand, prob)
 
         expected_utilities = self.expected_utility(cards)
@@ -78,11 +84,16 @@ class VanillaCFR:
             for key in sorted(player_info_sets.keys(), key=lambda x: (len(x), x)):
                 node = player_info_sets[key]
                 strategy = node.avg_strategy()
-                if self.num_actions == 2:
-                    print("{}:\t P: {} B: {}".format(key, strategy['P'], strategy['B']))
+                if self.json['game'] == 'kuhn':
+                    if self.num_actions == 2:
+                        print("{}:\t P: {} B: {}".format(key, strategy['P'], strategy['B']))
+                    else:
+                        print("{}:\t F: {} P: {} C: {} R: {}".format(
+                            key, strategy['F'], strategy['P'], strategy['C'], strategy['R']))
+
                 else:
-                    print("{}:\t F: {} P: {} C: {} R: {}".format(
-                        key, strategy['F'], strategy['P'], strategy['C'], strategy['R']))
+                    print("{}:\t F: {} C: {} R: {}".format(key, strategy['F'], strategy['C'], strategy['R']))
+
 
     def cfr(self, hand, probability):    
         """Runs the VanillaCFR algorithm
@@ -160,7 +171,7 @@ class VanillaCFR:
         expected_utility = np.zeros(self.num_players)
         for card in tqdm(all_combos, desc='Calculating expected utility'):
             self.hand_json['cards'] = card
-            hand = Hand(self.hand_json)
+            hand = self.hand(self.hand_json)
             expected_utility += self.traverse_tree(hand)
 
         return expected_utility/len(all_combos)

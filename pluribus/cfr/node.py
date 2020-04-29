@@ -62,6 +62,8 @@ class Node(RegretMin):
         else:
             avg_strategy = dict((key, 1/len(self.actions)) for key in self.strategy_sum.keys())
 
+        self.curr_strategy = avg_strategy
+        
         return avg_strategy
 
     def __repr__(self):

@@ -1,5 +1,3 @@
-import numpy as np 
-from itertools import permutations
 from copy import deepcopy
 
 class Hand:
@@ -58,14 +56,14 @@ class Hand:
             setattr(result, k, deepcopy(v, memo))
         return result
 
-    def bet(self, player):
+    def bet(self, player, amount):
         """Increment the amount a player has bet by 'amount'"
 
         Args:
             player: int which player has bet
             amount: int how much they have bet
         """
-        self.bets[player] += self.raise_size[self.round]
+        self.bets[player] += amount
 
     @property
     def history(self):
@@ -91,9 +89,24 @@ class Hand:
             new_hand.players_in[player] = False
 
         elif action == 'B' or action == 'R' or action == 'C':
-            new_hand.bet(player)
-            if action == 'R' or action == 'B':
+            if action == 'R':
+                bet_size = max(self.bets) - self.bets[player] + self.raise_size[self.round]
+                new_hand.bet(player, bet_size)
                 new_hand.raises[player] = True
+
+            elif action == 'B':
+                if new_hand.outstanding_bet():
+                    bet_size = max(self.bets) - self.bets[player]
+                    new_hand.bet(player, bet_size)
+                else:
+                    bet_size = max(self.bets) - self.bets[player] + self.raise_size[self.round]
+                    new_hand.bet(player, bet_size)
+                    new_hand.raises[player] = True
+
+            else:
+                bet_size = max(self.bets) - self.bets[player]
+                new_hand.bet(player, bet_size)
+
 
         elif action == 'P':
             if new_hand.outstanding_bet():
@@ -246,3 +259,13 @@ class Hand:
             else:
                 return set(['F', 'C'])
         return set(['P', 'R'])
+
+class HoldemHand(Hand):
+    def valid_actions(self):
+        if self.outstanding_bet():
+            num_raised = self.raises.count(True)
+            if num_raised < self.num_raises:
+                return set(['F', 'C', 'R'])
+            else:
+                return set(['F', 'C'])
+        return set(['F','C', 'R'])
