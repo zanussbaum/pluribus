@@ -41,7 +41,13 @@ class NestedSearch:
             for info_set in strat[player]:
                 strat[player][info_set].clear()
 
-        self.mccfr.subgame_solve(tree, strat, 1000)
+        subgame_strategy = self.mccfr.subgame_solve(tree, strat, 10000)
+
+        for key, value in subgame_strategy.items():
+            try:
+                self.strategy[key] = value
+            except KeyError:
+                self.strategy[key].strategy_sum += value.strategy_sum
 
     def opponent_turn(self, action):
         player = self.turn
@@ -54,7 +60,6 @@ class NestedSearch:
                     node.add_action(action)
 
             self.search()
-            
         if self.verbose:
             print("player {} played {}".format(player, action), flush=True)
 

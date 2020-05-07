@@ -40,22 +40,6 @@ class Hand:
     def __repr__(self):
         return str(self.history)
 
-    def __copy__(self):
-        cls = self.__class__
-        result = cls.__new__(cls)
-        result.__dict__.update(self.__dict__)
-        return result
-
-    def __deepcopy__(self, memo):
-        """Ability to deep copy this object
-        """
-        cls = self.__class__
-        result = cls.__new__(cls)
-        memo[id(self)] = result
-        for k, v in self.__dict__.items():
-            setattr(result, k, deepcopy(v, memo))
-        return result
-
     def bet(self, player, amount):
         """Increment the amount a player has bet by 'amount'"
 
@@ -91,7 +75,7 @@ class Hand:
             new_hand = deepcopy(self)
         else: 
             new_hand = self
-            
+
         if 'R' in action:
             if len(action) <= 1:
                 action = str(self.raise_size[self.round]) + action
