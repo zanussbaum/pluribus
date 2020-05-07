@@ -1,5 +1,6 @@
 import numpy as np
 import random
+from copy import deepcopy
 from itertools import permutations
 from pluribus.cfr.vanilla_cfr import VanillaCFR
 from pluribus.cfr.node import InfoSet
@@ -59,8 +60,9 @@ class MonteCarloCFR(VanillaCFR):
             iterations: int for number of iterations to run
         """
         self.hand_json['cards'] = cards
+        shuffle = np.random.shuffle
         for t in tqdm(range(1, iterations+1), desc='Training'):
-            np.random.shuffle(cards)
+            shuffle(cards)
             for player in range(self.num_players):
                 hand = self.hand(self.hand_json)
                 if t % self.strategy_interval == 0:
@@ -99,8 +101,10 @@ class MonteCarloCFR(VanillaCFR):
                             key, strategy['F'], strategy['P'], strategy['C'], strategy['R']))
 
                 else:
-                    print("{}:\t F: {} C: {} R: {}".format(key, strategy['F'], strategy['C'], strategy['R']))
-
+                    try:
+                        print("{}:\t F: {} C: {} R: {}".format(key, strategy['F'], strategy['C'], strategy['2R']))
+                    except:
+                        print("{}:\t F: {} C: {} R: {}".format(key, strategy['F'], strategy['C'], strategy['4R']))
 
     def mccfr(self, player, hand, prune=False):
         """Main function that runs the MonteCarloCFR
@@ -118,15 +122,15 @@ class MonteCarloCFR(VanillaCFR):
             utility = hand.payoff()
             return np.array(utility)
 
-        curr_player = hand.which_player()
+        curr_player = hand.turn
         
         if curr_player == player:
             info_set = hand.info_set(player)
             player_nodes = self.node_map.setdefault(player, {})
             node = player_nodes.setdefault(info_set, 
-                            InfoSet(info_set, self.actions, player))
+                            InfoSet(info_set, self.actions, hand))
 
-            valid_actions = hand.valid_actions()
+            valid_actions = node.valid_actions()
             strategy = node.strategy(valid_actions)
 
             expected_value = np.zeros(self.num_players)
@@ -134,30 +138,28 @@ class MonteCarloCFR(VanillaCFR):
             if prune:
                 explored = set()
 
-            for a in self.actions:
-                if a in valid_actions:
-                    if prune:
-                        if node.regret_sum[a] > self.regret_minimum:
-                            new_hand = hand.add(player, a)
-                            calculated_util = self.mccfr(player, new_hand, prune=True)
-                            utilities[a] = calculated_util[player]
-                            expected_value += calculated_util * strategy[a]
-                            explored.add(a)
-                    else:
+            for a in valid_actions:
+                if prune:
+                    if node.regret_sum[a] > self.regret_minimum:
                         new_hand = hand.add(player, a)
-                        calculated_util = self.mccfr(player, new_hand)
+                        calculated_util = self.mccfr(player, new_hand, prune=True)
                         utilities[a] = calculated_util[player]
                         expected_value += calculated_util * strategy[a]
+                        explored.add(a)
+                else:
+                    new_hand = hand.add(player, a)
+                    calculated_util = self.mccfr(player, new_hand)
+                    utilities[a] = calculated_util[player]
+                    expected_value += calculated_util * strategy[a]
             
-            for a in self.actions:
-                if a in valid_actions:
-                    if prune:
-                        if a in explored:
-                            regret = utilities[a] - expected_value[player]
-                            node.regret_sum[a] += regret
-                    else:
+            for a in valid_actions:
+                if prune:
+                    if a in explored:
                         regret = utilities[a] - expected_value[player]
                         node.regret_sum[a] += regret
+                else:
+                    regret = utilities[a] - expected_value[player]
+                    node.regret_sum[a] += regret
 
             return expected_value
 
@@ -165,9 +167,9 @@ class MonteCarloCFR(VanillaCFR):
             info_set = hand.info_set(curr_player)
             player_nodes = self.node_map.setdefault(curr_player, {})
             node = player_nodes.setdefault(info_set, 
-                            InfoSet(info_set, self.actions, curr_player))
+                            InfoSet(info_set, self.actions, hand))
 
-            valid_actions = hand.valid_actions()
+            valid_actions = node.valid_actions()
             strategy = node.strategy(valid_actions)
             actions = list(strategy.keys())
             prob = list(strategy.values())
@@ -192,14 +194,14 @@ class MonteCarloCFR(VanillaCFR):
         if hand.is_terminal():
             return
         
-        curr_player = hand.which_player()
+        curr_player = hand.turn
         if curr_player == player:
             info_set = hand.info_set(player)
             player_nodes = self.node_map.setdefault(player, {})
             node = player_nodes.setdefault(info_set, 
-                            InfoSet(info_set, self.actions, player))
+                            InfoSet(info_set, self.actions, hand))
 
-            valid_actions = hand.valid_actions()
+            valid_actions = node.valid_actions()
             strategy = node.strategy(valid_actions)
 
             actions = list(strategy.keys())
@@ -210,11 +212,185 @@ class MonteCarloCFR(VanillaCFR):
             self.update_strategy(player, new_hand)
 
         else:
-            valid_actions = hand.valid_actions()
-            for a in self.actions:
-                if a in valid_actions:
-                    new_hand = hand.add(curr_player, a)
-                    self.update_strategy(player, new_hand)
+            info_set = hand.info_set(curr_player)
+            player_nodes = self.node_map.setdefault(curr_player, {})
+            node = player_nodes.setdefault(info_set, 
+                            InfoSet(info_set, self.actions, hand))
+            valid_actions = node.valid_actions()
+            for a in valid_actions:
+                new_hand = hand.add(curr_player, a)
+                self.update_strategy(player, new_hand)
+
+    def subgame_solve(self, nature, strategy, iterations):
+        self.strategy = strategy
+        for t in tqdm(range(1, iterations+1), desc='Subgame solving'):
+            root = np.random.choice(nature.children)
+            for player in range(self.num_players):
+                if t % self.strategy_interval == 0:
+                    self.subgame_update_strategy(player, root)
+                if t > self.prune_threshold:
+                    will_prune = np.random.random()
+                    if will_prune < .05:
+                        self.subgame_mccfr(player, root)
+                    else:
+                        self.subgame_mccfr(player, root, prune=True)
+                else:
+                    self.subgame_mccfr(player, root)
+
+            if t < self.lcfr_threshold and t % self.discount_interval == 0:
+                discount = (t/self.discount_interval)/(t/self.discount_interval+ 1)
+                for player in range(self.num_players):
+                    player_nodes = self.strategy[player]
+                    for node in player_nodes.values():
+                        node.regret_sum = {key:value * discount for key,value in node.regret_sum.items()}
+                        node.strategy_sum = {key:value * discount for key,value in node.strategy_sum.items()}
+
+        return self.strategy
+
+    def subgame_mccfr(self, player, tree_node, prune=False):
+        if tree_node.hand.is_terminal():
+            utility = tree_node.hand.payoff()
+            return np.array(utility)
+
+        curr_player = tree_node.hand.turn
+
+        if curr_player == player:
+            info_set = tree_node.hand.info_set(player)
+            player_nodes = self.strategy.setdefault(player, {})
+            node = player_nodes.setdefault(info_set, 
+                            InfoSet(info_set, self.actions, tree_node.hand))
+
+            if not node.is_frozen:
+                valid_actions = node.valid_actions(tree_node.is_leaf)
+                strategy = node.strategy(valid_actions)
+
+                expected_value = np.zeros(self.num_players)
+                utilities = {action:0 for action in valid_actions}
+                if tree_node.is_leaf:
+                    if prune:
+                        explored = set()
+
+                    for a in valid_actions:
+                        if prune:
+                            if node.regret_sum[a] > self.regret_minimum:
+                                calculated_util = tree_node.value(self.node_map, a)
+                                utilities[a] = calculated_util[player]
+                                expected_value += calculated_util * strategy[a]
+                                explored.add(a)
+                        else:
+                            calculated_util = tree_node.value(self.node_map, a)
+                            utilities[a] = calculated_util[player]
+                            expected_value += calculated_util * strategy[a]
+                else:
+                    if prune:
+                        explored = set()
+
+                    for a in valid_actions:
+                        if prune:
+                            if node.regret_sum[a] > self.regret_minimum:
+                                next_tree_node = tree_node.children[a]
+                                calculated_util = self.subgame_mccfr(player, next_tree_node, prune=True)
+                                utilities[a] = calculated_util[player]
+                                expected_value += calculated_util * strategy[a]
+                                explored.add(a)
+                        else:
+                            next_tree_node = tree_node.children[a]
+                            calculated_util = self.subgame_mccfr(player, next_tree_node)
+                            utilities[a] = calculated_util[player]
+                            expected_value += calculated_util * strategy[a]
+                
+                for a in valid_actions:
+                    if prune:
+                        if a in explored:
+                            regret = utilities[a] - expected_value[player]
+                            node.regret_sum[a] += regret
+                    else:
+                        regret = utilities[a] - expected_value[player]
+                        node.regret_sum[a] += regret
+
+                return expected_value
+            else:
+                #you've already encountered this info set in the game and made a decision
+                raise NotImplementedError('Frozen action for infoset')
+
+        else:
+            info_set = tree_node.hand.info_set(curr_player)
+            player_nodes = self.strategy.setdefault(curr_player, {})
+            node = player_nodes.setdefault(info_set, 
+                            InfoSet(info_set, self.actions, tree_node.hand))
+            if not node.is_frozen:
+                valid_actions = node.valid_actions(tree_node.is_leaf)
+                strategy = node.strategy(valid_actions)
+
+                actions = list(strategy.keys())
+                prob = list(strategy.values())
+                random_action = random.choices(actions, weights=prob)[0]
+                if tree_node.is_leaf:
+                    calculated_util = tree_node.value(self.node_map, random_action)
+                    return calculated_util
+                else:
+                    next_tree_node = tree_node.children[random_action]
+                    return self.subgame_mccfr(player, next_tree_node, prune=prune)
+
+            else:
+                #you've already encountered this info set in the game and made a decision
+                raise NotImplementedError('Frozen action for infoset')
+
+    def subgame_update_strategy(self, player, tree_node):
+        if tree_node.hand.is_terminal():
+            return
+
+        curr_player = tree_node.hand.turn
+        if curr_player == player:
+            info_set = tree_node.hand.info_set(player)
+            player_nodes = self.strategy.setdefault(player, {})
+            node = player_nodes.setdefault(info_set, 
+                            InfoSet(info_set, self.actions, tree_node.hand))
+            if not node.is_frozen:
+                if tree_node.is_leaf:
+                    valid_actions = node.valid_actions(tree_node.is_leaf)
+                    strategy = node.strategy(valid_actions)
+
+                    actions = list(strategy.keys())
+                    prob = list(strategy.values())
+                    random_action = random.choices(actions, weights=prob)[0]
+                    node.strategy_sum[random_action] += 1
+                    return
+                else:
+                    valid_actions = node.valid_actions()
+                    strategy = node.strategy(valid_actions)
+
+                    actions = list(strategy.keys())
+                    prob = list(strategy.values())
+                    random_action = random.choices(actions, weights=prob)[0]
+                    node.strategy_sum[random_action] += 1
+                    next_tree_node = tree_node.children[random_action]
+                    self.subgame_update_strategy(player, next_tree_node)
+            else:
+                # take action 
+                raise NotImplementedError("Frozen action for infoset")
+
+        else:
+            info_set = tree_node.hand.info_set(curr_player)
+            player_nodes = self.strategy.setdefault(curr_player, {})
+            node = player_nodes.setdefault(info_set, 
+                            InfoSet(info_set, self.actions, tree_node.hand))
+            valid_actions = node.valid_actions(tree_node.is_leaf)
+            if not node.is_frozen:
+                if tree_node.is_leaf:
+                    strategy = node.strategy(valid_actions)
+
+                    actions = list(strategy.keys())
+                    prob = list(strategy.values())
+                    random_action = random.choices(actions, weights=prob)[0]
+                    node.strategy_sum[random_action] += 1
+                    return
+                else:
+                    for a in valid_actions:
+                            next_tree_node = tree_node.children[a]
+                            self.subgame_update_strategy(player, next_tree_node)
+            else:
+                raise NotImplementedError('Frozen action for infoset')
 
     
     def expected_utility(self, cards):
@@ -263,18 +439,17 @@ class MonteCarloCFR(VanillaCFR):
             utility = hand.payoff()
             return np.array(utility)
         try:
-            player = hand.which_player()
+            player = hand.turn
             info_set = hand.info_set(player)
             player_nodes = self.node_map[player]
             node = player_nodes[info_set]
 
             strategy = node.avg_strategy()
             util = np.zeros(self.num_players)
-            valid_actions = hand.valid_actions()
-            for a in self.actions:
-                if a in valid_actions:
-                    new_hand = hand.add(player, a)
-                    util += self.traverse_tree(new_hand) * strategy[a]
+            valid_actions = node.valid_actions()
+            for a in valid_actions:
+                new_hand = hand.add(player, a)
+                util += self.traverse_tree(new_hand) * strategy[a]
 
             return util
 

@@ -1,0 +1,97 @@
+import pickle
+import random
+import sys
+import numpy as np
+from pluribus.search.search import NestedSearch
+from pluribus.cfr.mccfr import MonteCarloCFR
+from pluribus.game.card import Card
+from pluribus.game.hand_eval import leduc_eval
+from pluribus.game.hand import HoldemHand
+
+
+class Game:
+    def __init__(self):
+        self.cards = [Card(12, 1), Card(13, 1), Card(14, 1), Card(12, 2), Card(13, 2), Card(14, 2)]
+        self.human = True
+        settings = {'num_players':2, 'num_actions':3, 'hand_eval': leduc_eval,
+            'num_rounds':2, 'num_raises':2, 'raise_size':[2,4],
+            'num_cards': 3, 'game': 'leduc', 'hand': HoldemHand
+        }
+
+        self.mccfr = MonteCarloCFR(settings)
+        try:
+            with open('../blueprint/leduc_strat.p', 'rb') as f:
+                blueprint = pickle.load(f)
+
+            self.mccfr.node_map = blueprint
+
+        except:
+            print('\n\n{}\nNo blueprint strategy was found.\n\
+                \nCreating a new one\n{}\n\n'.format('*'*100, '*'*100)) 
+           
+            self.mccfr.train(self.cards, 80000)
+
+            
+            
+            with open('../blueprint/leduc_strat.p', 'wb') as f:
+                pickle.dump(self.mccfr.node_map, f)
+
+        self.hand_json = self.mccfr.hand_json
+        self.hand_json['cards'] = self.cards
+
+    def startup(self):
+        pass
+
+    def _handle_action(self):
+        valid = False
+        if self.human:
+            while not valid:
+                try:
+                    opp_action = input("\nPlay an action (Fold, Call, Raise): ")
+                    if opp_action in set(['F', 'C', 'R']):
+                        if opp_action == 'R':
+                            amount = input("How much would you like to raise? ")
+                            if amount.isdigit():
+                                opp_action = amount + opp_action
+                                valid = True
+                        else:
+                            valid = True
+                    else:
+                        raise ValueError
+                except KeyboardInterrupt:
+                    sys.exit()
+                except:
+                    print('please enter a valid action (F, C, R)')
+
+        else:
+            info_set = self.search.info_set
+            node = self.search.strategy[self.search.turn]
+            strategy = node[info_set].curr_strategy
+            actions = list(strategy.keys())
+            prob = list(strategy.values())
+
+            opp_action = random.choices(actions, weights=prob)[0]
+
+        return opp_action
+
+    def play(self):
+        print('\nshuffling cards\n')
+        np.random.shuffle(self.cards)
+        print("Cards are {}".format(self.cards))
+        hand = HoldemHand(self.hand_json)
+        self.search = NestedSearch(self.mccfr, hand, 1)
+
+        while not self.search.terminal:
+            turn = self.search.turn
+
+            if turn == 0:
+                opp_action = self._handle_action()
+                self.search.opponent_turn(opp_action)
+
+            else:
+                self.search.traverser_turn()
+
+                
+if __name__ == '__main__':
+    Game().play()
+       

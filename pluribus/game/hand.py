@@ -68,12 +68,16 @@ class Hand:
     @property
     def history(self):
         return self._history
+     
+    @property
+    def public_state(self):
+        return self._public_state()
 
     @history.setter
     def history(self, a):
         self._history = a
 
-    def add(self, player, action):
+    def add(self, player, action, copy=True):
         """Adds a new action to the history and returns a new hand
 
         Args:
@@ -83,29 +87,39 @@ class Hand:
         Returns:
             new_hand: a modified Hand object
         """
-        new_hand = deepcopy(self)
+        if copy:
+            new_hand = deepcopy(self)
+        else: 
+            new_hand = self
+            
+        if 'R' in action:
+            if len(action) <= 1:
+                action = str(self.raise_size[self.round]) + action
+
         new_hand.history[new_hand.round].append(action)
         if action == 'F':
             new_hand.players_in[player] = False
 
-        elif action == 'B' or action == 'R' or action == 'C':
-            if action == 'R':
-                bet_size = max(self.bets) - self.bets[player] + self.raise_size[self.round]
-                new_hand.bet(player, bet_size)
+        elif action == 'B' or 'R' in action or action == 'C':
+            if 'R' in action:
+                raise_size = int(action[:-1])
+                amount = max(self.bets) - self.bets[player] + raise_size
+
+                new_hand.bet(player, amount)
                 new_hand.raises[player] = True
 
             elif action == 'B':
                 if new_hand.outstanding_bet():
-                    bet_size = max(self.bets) - self.bets[player]
-                    new_hand.bet(player, bet_size)
+                    amount = max(self.bets) - self.bets[player]
+                    new_hand.bet(player, amount)
                 else:
-                    bet_size = max(self.bets) - self.bets[player] + self.raise_size[self.round]
-                    new_hand.bet(player, bet_size)
+                    amount = max(self.bets) - self.bets[player] + self.raise_size[self.round]
+                    new_hand.bet(player, amount)
                     new_hand.raises[player] = True
 
             else:
-                bet_size = max(self.bets) - self.bets[player]
-                new_hand.bet(player, bet_size)
+                amount = max(self.bets) - self.bets[player]
+                new_hand.bet(player, amount)
 
 
         elif action == 'P':
@@ -129,14 +143,26 @@ class Hand:
         """
         card = self.cards[player]
         if self.round > 0:
+            # this will be a problem later on when there are more than one board cards
             board_cards = self.cards[self.num_players]
-            info_set = str(card) + " || " + str(board_cards) + ' || ' + str(self.history)
+            info_set = "%s || %s || %s" %(card, board_cards, self.history)
 
         else:
-            info_set = str(card) + " || " + str(self.history)
+            info_set = "%s || %s" %(card, self.history)
 
 
         return info_set
+
+    def _public_state(self):
+        if self.round > 0:
+            board_cards = self.cards[self.num_players]
+            public = "%s || %s" % (board_cards, self.history)
+
+        else:
+            public = "%s" % self.history
+
+        return public
+
 
     def is_terminal(self):
         """Checks to see if a hand is in a terminal state
@@ -158,9 +184,9 @@ class Hand:
         
         return False
 
-    def is_chance(self):
+    def is_leaf(self, round):
         min_actions = self.players_in.count(True)
-        actions_in_round = len(self.history[-1])
+        actions_in_round = len(self.history[round])
 
         if actions_in_round >= min_actions and self.all_called_or_folded():
             return True
@@ -240,6 +266,7 @@ class Hand:
         payoff = pot / len(winners)
         payoffs = [-bet for bet in self.bets]
 
+        self.winners = winners
         for w in winners:
             payoffs[w] += payoff
 
@@ -261,11 +288,6 @@ class Hand:
         return set(['P', 'R'])
 
 class HoldemHand(Hand):
-    def valid_actions(self):
-        if self.outstanding_bet():
-            num_raised = self.raises.count(True)
-            if num_raised < self.num_raises:
-                return set(['F', 'C', 'R'])
-            else:
-                return set(['F', 'C'])
-        return set(['F','C', 'R'])
+    @property
+    def actions(self):
+        return set(['{}R'.format(self.raise_size[self.round]), 'F', 'C', '1', '2', '3', '4'])

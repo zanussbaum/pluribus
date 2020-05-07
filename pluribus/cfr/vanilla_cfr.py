@@ -46,7 +46,7 @@ class VanillaCFR:
                 self.actions = ['F', 'P', 'C', 'R']
         else:
             if json['game'] == 'leduc':
-                self.actions = ['F', 'C', 'R']
+                self.actions = ['F', 'C', 'R', '1', '2', '3', '4']
                 
         self.node_map = {}
 
@@ -116,7 +116,7 @@ class VanillaCFR:
             utility = hand.payoff()
             return np.array(utility)
 
-        player = hand.which_player()
+        player = hand.turn
         info_set = hand.info_set(player)
         player_nodes = self.node_map.setdefault(player, {})
         node = player_nodes.setdefault(info_set, 
@@ -129,24 +129,21 @@ class VanillaCFR:
 
         node_util = np.zeros(self.num_players)
         
-        #may need to change this to valid actions in info set?
-        for a in self.actions:
-            if a in valid_actions:
-                new_hand = hand.add(player, a)
-                new_prob = tuple(prob if j != player else prob * strategy[a] for j, prob in enumerate(probability))
-                returned_util = self.cfr(new_hand, new_prob)
-                utilities[a] = returned_util[player]
-                node_util += returned_util * strategy[a]
+        for a in valid_actions:
+            new_hand = hand.add(player, a)
+            new_prob = tuple(prob if j != player else prob * strategy[a] for j, prob in enumerate(probability))
+            returned_util = self.cfr(new_hand, new_prob)
+            utilities[a] = returned_util[player]
+            node_util += returned_util * strategy[a]
            
         opp_prob = 1
         for i, prob in enumerate(probability):
             if i != player:
                 opp_prob *= prob
             
-        for a in self.actions:
-            if a in valid_actions:
-                regret = utilities[a] - node_util[player]
-                node.regret_sum[a] += regret * opp_prob
+        for a in valid_actions:
+            regret = utilities[a] - node_util[player]
+            node.regret_sum[a] += regret * opp_prob
 
         return node_util
 
@@ -196,7 +193,7 @@ class VanillaCFR:
             utility = hand.payoff()
             return np.array(utility)
 
-        player = hand.which_player()
+        player = hand.turn
         info_set = hand.info_set(player)
         player_nodes = self.node_map[player]
         node = player_nodes[info_set]

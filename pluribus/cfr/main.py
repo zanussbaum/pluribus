@@ -34,7 +34,6 @@ elif args.cfr == 1:
         settings['num_rounds'] = 2
         settings['num_raises'] = 2
         settings['raise_size'] = [2,4]
-        settings['num_actions'] = 3
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
         settings['game'] = 'leduc'
         settings['hand'] = HoldemHand
@@ -63,7 +62,6 @@ elif args.cfr == 2:
         settings['num_rounds'] = 2
         settings['num_raises'] = 2
         settings['raise_size'] = [2,4]
-        settings['num_actions'] = 3
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
         settings['game'] = 'leduc'
         settings['hand'] = HoldemHand
@@ -82,7 +80,6 @@ elif args.cfr == 2:
     three_kuhn.train(cards, args.iterations)
 
 elif args.mccfr == 1:
-    cards = [i for i in range(1, 4)]
     settings = {'num_players':2}
 
     if args.game == 1:
@@ -92,7 +89,6 @@ elif args.mccfr == 1:
         settings['num_rounds'] = 2
         settings['num_raises'] = 2
         settings['raise_size'] = [2,4]
-        settings['num_actions'] = 3
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
         settings['game'] = 'leduc'
         settings['hand'] = HoldemHand
@@ -121,7 +117,6 @@ elif args.mccfr == 2:
         settings['num_rounds'] = 2
         settings['num_raises'] = 2
         settings['raise_size'] = [2,4]
-        settings['num_actions'] = 3
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
         settings['game'] = 'leduc'
         settings['hand'] = HoldemHand

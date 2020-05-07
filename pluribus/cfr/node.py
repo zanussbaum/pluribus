@@ -23,7 +23,7 @@ class Node(RegretMin):
     """
     def __init__(self, info_set, actions):
         self.info_set = info_set
-        self.actions = actions
+        self.actions = set(actions)
         self.regret_sum = {action:0 for action in actions}
         self.curr_strategy = {action:0 for action in actions}
         self.strategy_sum = {action:0 for action in actions}
@@ -48,8 +48,6 @@ class Node(RegretMin):
             strat = dict((key, 1/num_valid) if key in actions else (key, 0) for key in strat.keys())
 
         self.strategy_sum = {key: value + strat[key] * weight for key, value in self.strategy_sum.items()}
-
-        self.curr_strategy = strat
 
         return strat
 
@@ -86,7 +84,38 @@ class InfoSet(Node):
         strategy_sum: a numpy array of counts for each time you play an action
         player: which player this information set belongs to
     """
-    def __init__(self, info_set, num_actions, player):
-        super().__init__(info_set, num_actions)
-        self.player = player
+    def __init__(self, info_set, actions, hand):
+        super().__init__(info_set, actions)
+        self.hand = hand
         self.is_frozen = False
+        try:
+            self.actions = hand.actions
+            self.regret_sum = {action:0 for action in self.actions}
+            self.curr_strategy = {action:0 for action in self.actions}
+            self.strategy_sum = {action:0 for action in self.actions}
+        except:
+            pass
+
+    def add_action(self, action):
+        self.actions.add(action)
+        self.regret_sum[action] = 0
+        self.strategy_sum[action] = 0
+        self.curr_strategy[action] = 0
+
+    def valid_actions(self, continuation=False):
+        if continuation:
+            return ['1', '2', '3', '4']
+
+        if self.hand.outstanding_bet():
+            num_raised = self.hand.raises.count(True)
+            if num_raised < self.hand.num_raises:
+                valid = [a for a in self.actions if not a.isdigit()]
+                return valid
+            else:
+                valid = [a for a in self.actions if 'R' not in a and not a.isdigit()]
+                return valid
+        return [a for a in self.actions if not a.isdigit()]
+
+    def clear(self):
+        self.regret_sum = {action:0 for action in self.actions}
+        self.strategy_sum = {action:0 for action in self.actions}
