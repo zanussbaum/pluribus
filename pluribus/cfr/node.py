@@ -21,12 +21,12 @@ class Node(RegretMin):
         strategy: a numpy array of probability distributions for each strategy
         strategy_sum: a numpy array of counts for each time you play an action
     """
-    def __init__(self, info_set, actions):
-        self.info_set = info_set
+    def __init__(self, actions):
         self.actions = set(actions)
         self.regret_sum = {action:0 for action in actions}
         self.curr_strategy = {action:0 for action in actions}
         self.strategy_sum = {action:0 for action in actions}
+
 
     def strategy(self, actions, weight=1):
         """Calculates the new strategy based on regrets
@@ -38,14 +38,16 @@ class Node(RegretMin):
         Returns:
             strategy: a numpy array of the current strategy
         """
-        strat = {action:max(value, 0) for action, value in self.regret_sum.items()}
-        norm_sum = sum([value for key, value in strat.items() if key in actions])
+        m = max
+        s = sum
+        strat = {action:m(value, 0) for action, value in self.regret_sum.items()}
+        norm_sum = s([strat[key] for key in strat if key in actions])
     
         if norm_sum > 0:
-            strat = dict((key, strat[key]/norm_sum) if key in actions else (key, 0) for key in strat.keys())
+            start = {key:(value/norm_sum if key in actions else 0) for key, value in strat.items()}
         else:
             num_valid = len(actions)
-            strat = dict((key, 1/num_valid) if key in actions else (key, 0) for key in strat.keys())
+            strat = {key:(1/num_valid if key in actions else 0) for key, value in strat.items()}
 
         self.strategy_sum = {key: value + strat[key] * weight for key, value in self.strategy_sum.items()}
 
@@ -68,8 +70,8 @@ class Node(RegretMin):
         return 'info: {}\n strategy_sum: {}\n regret: {}\n strategy: {}\n'.format(
             self.info_set, self.strategy_sum, self.regret_sum, self.curr_strategy)
 
-    def __eq__(self, value):
-        return self.info_set == value.info_set
+    # def __eq__(self, value):
+    #     return self.info_set == value.info_set
 
 
 class InfoSet(Node):
@@ -84,37 +86,19 @@ class InfoSet(Node):
         strategy_sum: a numpy array of counts for each time you play an action
         player: which player this information set belongs to
     """
-    def __init__(self, info_set, actions, hand):
-        super().__init__(info_set, actions)
-        self.hand = hand
+    def __init__(self, actions):
+        super().__init__(actions)
         self.is_frozen = False
-        try:
-            self.actions = hand.actions
-            self.regret_sum = {action:0 for action in self.actions}
-            self.curr_strategy = {action:0 for action in self.actions}
-            self.strategy_sum = {action:0 for action in self.actions}
-        except:
-            pass
-
+        self.actions = set(actions) | set(('1', '2', '3', '4'))
+        self.regret_sum = {action:0 for action in self.actions}
+        self.curr_strategy = {action:0 for action in self.actions}
+        self.strategy_sum = {action:0 for action in self.actions}
+    
     def add_action(self, action):
         self.actions.add(action)
         self.regret_sum[action] = 0
         self.strategy_sum[action] = 0
         self.curr_strategy[action] = 0
-
-    def valid_actions(self, continuation=False):
-        if continuation:
-            return ['1', '2', '3', '4']
-
-        if self.hand.outstanding_bet():
-            num_raised = self.hand.raises.count(True)
-            if num_raised < self.hand.num_raises:
-                valid = [a for a in self.actions if not a.isdigit()]
-                return valid
-            else:
-                valid = [a for a in self.actions if 'R' not in a and not a.isdigit()]
-                return valid
-        return [a for a in self.actions if not a.isdigit()]
 
     def clear(self):
         self.regret_sum = {action:0 for action in self.actions}

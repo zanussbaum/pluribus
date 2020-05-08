@@ -1,9 +1,10 @@
 import numpy as np
 import importlib
 import sys
-from pluribus.cfr.node import Node
 from itertools import permutations
 from tqdm import tqdm
+from collections import defaultdict
+from pluribus.cfr.node import Node
 
 class VanillaCFR:
     """An object to run Vanilla Counterfactual regret on Kuhn poker, or other games
@@ -38,7 +39,7 @@ class VanillaCFR:
         self.num_raises = json['num_raises']
         self.num_rounds = json['num_rounds']
         self.num_cards = json['num_cards']
-        self.hand = json['hand']
+        self.state = json['state']
         if json['game'] == 'kuhn':
             if self.num_actions == 2:
                 self.actions = ['P', 'B']
@@ -46,17 +47,19 @@ class VanillaCFR:
                 self.actions = ['F', 'P', 'C', 'R']
         else:
             if json['game'] == 'leduc':
-                self.actions = ['F', 'C', 'R', '1', '2', '3', '4']
+                self.actions = ['F', 'C', 'R']
                 
-        self.node_map = {}
+        func = lambda: defaultdict(lambda: Node(self.actions))
+        self.node_map = defaultdict(func)
 
         self.json = json
-        self.hand_json = {'num_players': json['num_players'], 
+        self.state_json = {'num_players': json['num_players'], 
                         'num_actions': json['num_actions'], 
                         'num_rounds': json['num_rounds'],
                         'num_raises':json['num_raises'], 
                         'hand_eval':json['hand_eval'],
-                        'raise_size':json['raise_size']}
+                        'raise_size':json['raise_size'],
+                        'actions':self.actions}
 
     def train(self, cards, iterations):
         """Runs CFR and prints the calculated strategies
@@ -68,11 +71,11 @@ class VanillaCFR:
             cards: array-like of ints denoting each card
             iterations: int for number of iterations to run
         """
-        self.hand_json['cards'] = cards
+        self.state_json['cards'] = cards
         for _ in tqdm(range(1, iterations+1), desc='Training'):
             np.random.shuffle(cards)
             prob = tuple(np.ones(self.num_players))
-            hand = self.hand(self.hand_json)
+            hand = self.state(self.state_json)
             self.cfr(hand, prob)
 
         expected_utilities = self.expected_utility(cards)
@@ -112,17 +115,15 @@ class VanillaCFR:
             utility: array-like of floats for the utility
                 for the current node 
         """    
-        if hand.is_terminal():
+        if hand.is_terminal:
             utility = hand.payoff()
             return np.array(utility)
 
         player = hand.turn
-        info_set = hand.info_set(player)
-        player_nodes = self.node_map.setdefault(player, {})
-        node = player_nodes.setdefault(info_set, 
-                            Node(info_set, self.actions))
+        info_set = hand.info_set
+        node = self.node_map[player][info_set]
 
-        valid_actions = hand.valid_actions()
+        valid_actions = hand.valid_actions
         strategy = node.strategy(valid_actions, probability[player])
         
         utilities = {action:0 for action in valid_actions}
@@ -167,8 +168,8 @@ class VanillaCFR:
 
         expected_utility = np.zeros(self.num_players)
         for card in tqdm(all_combos, desc='Calculating expected utility'):
-            self.hand_json['cards'] = card
-            hand = self.hand(self.hand_json)
+            self.state_json['cards'] = card
+            hand = self.state(self.state_json)
             expected_utility += self.traverse_tree(hand)
 
         return expected_utility/len(all_combos)
@@ -189,18 +190,18 @@ class VanillaCFR:
         Returns:
             util: array_like of floats for expected utility for this node
         """
-        if hand.is_terminal():
+        if hand.is_terminal:
             utility = hand.payoff()
             return np.array(utility)
 
         player = hand.turn
-        info_set = hand.info_set(player)
+        info_set = hand.info_set
         player_nodes = self.node_map[player]
         node = player_nodes[info_set]
 
         strategy = node.avg_strategy()
         util = np.zeros(self.num_players)
-        valid_actions = hand.valid_actions()
+        valid_actions = hand.valid_actions
         for a in self.actions:
             if a in valid_actions:
                 new_hand = hand.add(player, a)

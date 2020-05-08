@@ -23,7 +23,7 @@ class NestedSearch:
         return self.game_state.turn
     @property
     def terminal(self):
-        return self.game_state.is_terminal()
+        return self.game_state.is_terminal
 
     @property
     def info_set(self):
@@ -37,21 +37,23 @@ class NestedSearch:
         subgame = Subgame(self.public_state)
         tree = subgame.build_tree(self.strategy)
         strat = self.strategy
-        for player in strat.keys():
+        for player in strat:
             for info_set in strat[player]:
                 strat[player][info_set].clear()
 
-        subgame_strategy = self.mccfr.subgame_solve(tree, strat, 10000)
+        subgame_strategy = self.mccfr.subgame_solve(tree, strat, 1000)
 
-        for key, value in subgame_strategy.items():
-            try:
-                self.strategy[key] = value
-            except KeyError:
-                self.strategy[key].strategy_sum += value.strategy_sum
+        # for player in self.strategy:
+        #     strat = self.strategy[player]
+        #     for key in subgame_strategy:
+        #         if key not in strat:
+        #             strat[key] = subgame_strategy[key]
+        #         else:
+        #             strat[key].strategy_sum += subgame_strategy[key].strategy_sum
 
     def opponent_turn(self, action):
         player = self.turn
-        info_set = self.game_state.info_set(player)
+        info_set = self.game_state.info_set
         node = self.strategy[player][info_set]
         if action not in node.curr_strategy.keys():
             public_state = self.game_state.public_state
@@ -67,7 +69,7 @@ class NestedSearch:
         self.check_new_round()
 
     def traverser_turn(self):
-        info_set = self.game_state.info_set(self.pluribus)
+        info_set = self.game_state.info_set
         player_nodes = self.strategy[self.pluribus]
         node = player_nodes[info_set]
         strategy = node.avg_strategy()

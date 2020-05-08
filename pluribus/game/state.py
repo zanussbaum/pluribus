@@ -1,6 +1,7 @@
-from copy import deepcopy
+import numpy as np
+from copy import deepcopy, copy
 
-class Hand:
+class State:
     """Game/hand rules class inspired from https://github.com/tansey/pycfr
 
     This class makes it easier to calculate the expected utilities for 
@@ -25,7 +26,7 @@ class Hand:
         """
         self.players_in = [True] * json['num_players']
         self.bets = [1] * json['num_players']
-        self.raises = [False] * json['num_players']
+        self.raises = 0
         self.cards = json['cards']
         self._history = [[] for _ in range(json['num_rounds'])]
         self.round = 0
@@ -36,9 +37,21 @@ class Hand:
         self.num_raises = json['num_raises']
         self.eval = json['hand_eval']
         self.raise_size = json['raise_size']
+        self.actions = json['actions']
+        self.json = json
 
     def __repr__(self):
         return str(self.history)
+
+    def __copy__(self):
+        new_instance = State(self.json)
+        new_instance.__dict__.update(self.__dict__)
+        new_instance._history = deepcopy(self._history)
+        new_instance.raises = deepcopy(self.raises)
+        new_instance.bets = deepcopy(self.bets)
+        new_instance.players_in = deepcopy(self.players_in)
+
+        return new_instance
 
     def bet(self, player, amount):
         """Increment the amount a player has bet by 'amount'"
@@ -55,11 +68,67 @@ class Hand:
      
     @property
     def public_state(self):
-        return self._public_state()
+        if self.round > 0:
+            board_cards = self.cards[self.num_players]
+            public = "%s || %s" % (board_cards, self.history)
 
-    @history.setter
-    def history(self, a):
-        self._history = a
+        else:
+            public = "%s" % self.history
+
+        return public
+
+    @property
+    def is_terminal(self):
+        """Checks to see if a hand is in a terminal state
+
+        Returns:
+            bool: if the hand is in a terminal state
+        """
+        if self.players_in.count(True) == 1:
+            return True
+        
+        if self.round < self.num_rounds:
+            return False
+    
+        min_actions = self.players_in.count(True)
+        actions_in_round = len(self.history[-1])
+
+        if actions_in_round >= min_actions and self.all_called_or_folded():
+            return True
+        
+        return False
+
+    @property
+    def info_set(self):
+        """Gets the info set the player is currently in
+
+        Args:
+            player: int which player is currently playing 
+
+        Returns:
+            info_set: a str of the information set
+        """
+        player = self.turn
+        card = self.cards[player]
+        if self.round > 0:
+            # this will be a problem later on when there are more than one board cards
+            board_cards = self.cards[self.num_players]
+            info_set = "%s || %s || %s" %(card, board_cards, self.history)
+
+        else:
+            info_set = "%s || %s" %(card, self.history)
+
+        return info_set
+
+    @property
+    def valid_actions(self): 
+        num_raised = self.raises
+        if num_raised < self.num_raises:
+            valid = self.actions
+            return set(valid)
+        else:
+            valid = [a for a in self.actions if 'R' not in a]
+            return set(valid)
 
     def add(self, player, action, copy=True):
         """Adds a new action to the history and returns a new hand
@@ -89,25 +158,27 @@ class Hand:
                 raise_size = int(action[:-1])
                 amount = max(self.bets) - self.bets[player] + raise_size
 
+                new_hand.raises += 1
+
                 new_hand.bet(player, amount)
-                new_hand.raises[player] = True
+                
+                
 
             elif action == 'B':
-                if new_hand.outstanding_bet():
+                if not new_hand.all_called_or_folded():
                     amount = max(self.bets) - self.bets[player]
                     new_hand.bet(player, amount)
                 else:
                     amount = max(self.bets) - self.bets[player] + self.raise_size[self.round]
                     new_hand.bet(player, amount)
-                    new_hand.raises[player] = True
+                    new_hand.raises += True
 
             else:
                 amount = max(self.bets) - self.bets[player]
                 new_hand.bet(player, amount)
 
-
         elif action == 'P':
-            if new_hand.outstanding_bet():
+            if not new_hand.all_called_or_folded():
                 new_hand.players_in[player] = False
 
         elif action == '-':
@@ -115,58 +186,6 @@ class Hand:
 
         new_hand.handle_round()
         return new_hand
-
-    def info_set(self, player):
-        """Gets the info set the player is currently in
-
-        Args:
-            player: int which player is currently playing 
-
-        Returns:
-            info_set: a str of the information set
-        """
-        card = self.cards[player]
-        if self.round > 0:
-            # this will be a problem later on when there are more than one board cards
-            board_cards = self.cards[self.num_players]
-            info_set = "%s || %s || %s" %(card, board_cards, self.history)
-
-        else:
-            info_set = "%s || %s" %(card, self.history)
-
-
-        return info_set
-
-    def _public_state(self):
-        if self.round > 0:
-            board_cards = self.cards[self.num_players]
-            public = "%s || %s" % (board_cards, self.history)
-
-        else:
-            public = "%s" % self.history
-
-        return public
-
-
-    def is_terminal(self):
-        """Checks to see if a hand is in a terminal state
-
-        Returns:
-            bool: if the hand is in a terminal state
-        """
-        if self.players_in.count(True) == 1:
-            return True
-        
-        if self.round < self.num_rounds:
-            return False
-    
-        min_actions = self.players_in.count(True)
-        actions_in_round = len(self.history[-1])
-
-        if actions_in_round >= min_actions and self.all_called_or_folded():
-            return True
-        
-        return False
 
     def is_leaf(self, round):
         min_actions = self.players_in.count(True)
@@ -189,14 +208,6 @@ class Hand:
             if still_in and self.bets[i] < max_bet:
                 return False
         return True
-    
-    def outstanding_bet(self):
-        """Returns whether there is an outstanding bet or not
-
-        Returns:
-            bool: true if not everyone has folded or called
-        """
-        return not self.all_called_or_folded()
 
     def handle_round(self):
         """Helper function to determine if the round has ended
@@ -211,6 +222,7 @@ class Hand:
        
         if actions_in_round >= min_actions and self.all_called_or_folded():
             self.round += 1
+            self.raises = 0
             if self.round == self.num_rounds:
                 # we are at a terminal state
                 return
@@ -256,22 +268,5 @@ class Hand:
 
         return payoffs
 
-    def which_player(self):
-        return self.turn
-
-    def valid_actions(self):
-        if self.num_actions == 2:
-            return set(['P', 'B'])
-
-        if self.outstanding_bet():
-            num_raised = self.raises.count(True)
-            if num_raised < self.num_raises:
-                return set(['F', 'C', 'R'])
-            else:
-                return set(['F', 'C'])
-        return set(['P', 'R'])
-
-class HoldemHand(Hand):
-    @property
-    def actions(self):
-        return set(['{}R'.format(self.raise_size[self.round]), 'F', 'C', '1', '2', '3', '4'])
+class LeducState(State):
+    pass

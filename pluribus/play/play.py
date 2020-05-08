@@ -6,7 +6,7 @@ from pluribus.search.search import NestedSearch
 from pluribus.cfr.mccfr import MonteCarloCFR
 from pluribus.game.card import Card
 from pluribus.game.hand_eval import leduc_eval
-from pluribus.game.hand import HoldemHand
+from pluribus.game.state import LeducState
 
 
 class Game:
@@ -15,7 +15,7 @@ class Game:
         self.human = True
         settings = {'num_players':2, 'num_actions':3, 'hand_eval': leduc_eval,
             'num_rounds':2, 'num_raises':2, 'raise_size':[2,4],
-            'num_cards': 3, 'game': 'leduc', 'hand': HoldemHand
+            'num_cards': 3, 'game': 'leduc', 'state': LeducState
         }
 
         self.mccfr = MonteCarloCFR(settings)
@@ -29,15 +29,15 @@ class Game:
             print('\n\n{}\nNo blueprint strategy was found.\n\
                 \nCreating a new one\n{}\n\n'.format('*'*100, '*'*100)) 
            
-            self.mccfr.train(self.cards, 80000)
+            self.mccfr.train(self.cards, 1)
 
             
             
             with open('../blueprint/leduc_strat.p', 'wb') as f:
                 pickle.dump(self.mccfr.node_map, f)
 
-        self.hand_json = self.mccfr.hand_json
-        self.hand_json['cards'] = self.cards
+        self.state_json = self.mccfr.state_json
+        self.state_json['cards'] = self.cards
 
     def startup(self):
         pass
@@ -78,8 +78,8 @@ class Game:
         print('\nshuffling cards\n')
         np.random.shuffle(self.cards)
         print("Cards are {}".format(self.cards))
-        hand = HoldemHand(self.hand_json)
-        self.search = NestedSearch(self.mccfr, hand, 1)
+        state = LeducState(self.state_json)
+        self.search = NestedSearch(self.mccfr, state, 1)
 
         while not self.search.terminal:
             turn = self.search.turn

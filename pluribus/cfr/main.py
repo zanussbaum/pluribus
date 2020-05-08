@@ -1,10 +1,11 @@
 import argparse
-import numpy as np 
+import numpy as np
+import logging
 from pluribus.cfr.regret_min import RegretMin
 from pluribus.cfr.vanilla_cfr import VanillaCFR
 from pluribus.cfr.mccfr import MonteCarloCFR
 from pluribus.game.card import Card
-from pluribus.game.hand import Hand, HoldemHand
+from pluribus.game.state import State, LeducState
 from pluribus.game.hand_eval import kuhn_eval, leduc_eval
 
 
@@ -36,7 +37,7 @@ elif args.cfr == 1:
         settings['raise_size'] = [2,4]
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
         settings['game'] = 'leduc'
-        settings['hand'] = HoldemHand
+        settings['state'] = LeducState
     else:
         cards = [Card(12, 1), Card(13, 1), Card(14, 1)]
         settings['hand_eval'] = kuhn_eval
@@ -46,7 +47,7 @@ elif args.cfr == 1:
         settings['raise_size'] = [1]
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
         settings['game'] = 'kuhn'
-        settings['hand'] = Hand
+        settings['state'] = State
         
 
     kuhn_regret = VanillaCFR(settings)
@@ -64,7 +65,7 @@ elif args.cfr == 2:
         settings['raise_size'] = [2,4]
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
         settings['game'] = 'leduc'
-        settings['hand'] = HoldemHand
+        settings['state'] = LeducState
     else:
         cards = [Card(11, 1), Card(12, 1), Card(13, 1), Card(14, 1)]
         settings['hand_eval'] = kuhn_eval
@@ -74,7 +75,7 @@ elif args.cfr == 2:
         settings['raise_size'] = [1]
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
         settings['game'] = 'kuhn'
-        settings['hand'] = Hand
+        settings['state'] = State
 
     three_kuhn = VanillaCFR(settings)
     three_kuhn.train(cards, args.iterations)
@@ -91,7 +92,7 @@ elif args.mccfr == 1:
         settings['raise_size'] = [2,4]
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
         settings['game'] = 'leduc'
-        settings['hand'] = HoldemHand
+        settings['state'] = LeducState
     else:
         cards = [Card(12, 1), Card(13, 1), Card(14, 1)]
         settings['hand_eval'] = kuhn_eval
@@ -101,7 +102,7 @@ elif args.mccfr == 1:
         settings['raise_size'] = [1]
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
         settings['game'] = 'kuhn'
-        settings['hand'] = Hand
+        settings['state'] = State
 
     mccfr = MonteCarloCFR(settings)
     mccfr.train(cards, args.iterations)
@@ -119,7 +120,7 @@ elif args.mccfr == 2:
         settings['raise_size'] = [2,4]
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
         settings['game'] = 'leduc'
-        settings['hand'] = HoldemHand
+        settings['state'] = LeducState
     else:
         cards = [Card(11, 1), Card(12, 1), Card(13, 1), Card(14, 1)]
         settings['hand_eval'] = kuhn_eval
@@ -129,7 +130,7 @@ elif args.mccfr == 2:
         settings['raise_size'] = [1]
         settings['num_cards'] = settings['num_players'] + settings['num_rounds'] - 1
         settings['game'] = 'kuhn'
-        settings['hand'] = Hand
+        settings['state'] = State
         
     mccfr = MonteCarloCFR(settings)
     mccfr.train(cards, args.iterations)
