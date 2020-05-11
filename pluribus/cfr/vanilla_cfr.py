@@ -49,8 +49,7 @@ class VanillaCFR:
             if json['game'] == 'leduc':
                 self.actions = ['F', 'C', 'R']
                 
-        func = lambda: defaultdict(lambda: Node(self.actions))
-        self.node_map = defaultdict(func)
+        self.node_map = {}
 
         self.json = json
         self.state_json = {'num_players': json['num_players'], 
@@ -121,7 +120,8 @@ class VanillaCFR:
 
         player = hand.turn
         info_set = hand.info_set
-        node = self.node_map[player][info_set]
+        player_nodes = self.node_map.setdefault(player, {})
+        node = player_nodes.setdefault(info_set, Node(self.actions))
 
         valid_actions = hand.valid_actions
         strategy = node.strategy(valid_actions, probability[player])

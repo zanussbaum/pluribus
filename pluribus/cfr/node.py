@@ -1,4 +1,5 @@
 import numpy as np
+import multiprocessing as mp
 from pluribus.cfr.regret_min import RegretMin
 
 
@@ -27,7 +28,6 @@ class Node(RegretMin):
         self.curr_strategy = {action:0 for action in actions}
         self.strategy_sum = {action:0 for action in actions}
 
-
     def strategy(self, actions, weight=1):
         """Calculates the new strategy based on regrets
 
@@ -44,7 +44,7 @@ class Node(RegretMin):
         norm_sum = s([strat[key] for key in strat if key in actions])
     
         if norm_sum > 0:
-            start = {key:(value/norm_sum if key in actions else 0) for key, value in strat.items()}
+            strat = {key:(strat[key]/norm_sum if key in actions else 0) for key in actions}
         else:
             num_valid = len(actions)
             strat = {key:(1/num_valid if key in actions else 0) for key, value in strat.items()}
@@ -70,9 +70,6 @@ class Node(RegretMin):
         return 'info: {}\n strategy_sum: {}\n regret: {}\n strategy: {}\n'.format(
             self.info_set, self.strategy_sum, self.regret_sum, self.curr_strategy)
 
-    # def __eq__(self, value):
-    #     return self.info_set == value.info_set
-
 
 class InfoSet(Node):
     """An object that represents an Information Set node
@@ -89,10 +86,35 @@ class InfoSet(Node):
     def __init__(self, actions):
         super().__init__(actions)
         self.is_frozen = False
-        self.actions = set(actions) | set(('1', '2', '3', '4'))
+        self.actions = set(actions)
         self.regret_sum = {action:0 for action in self.actions}
         self.curr_strategy = {action:0 for action in self.actions}
         self.strategy_sum = {action:0 for action in self.actions}
+
+        self.lock = mp.Lock()
+
+    def strategy(self, actions, weight=1):
+        """Calculates the new strategy based on regrets
+
+        Gets the current strategy through regret matching
+        Args:
+            actions: boolean list of valid actions
+            weight: float of probability that you are at that info set
+        Returns:
+            strategy: a numpy array of the current strategy
+        """
+        m = max
+        s = sum
+        strat = {action:m(value, 0) for action, value in self.regret_sum.items()}
+        norm_sum = s([strat[key] for key in strat if key in actions])
+    
+        if norm_sum > 0:
+            strat = {key:(strat[key]/norm_sum if key in actions else 0) for key in actions}
+        else:
+            num_valid = len(actions)
+            strat = {key:(1/num_valid if key in actions else 0) for key, value in strat.items()}
+
+        return strat
     
     def add_action(self, action):
         self.actions.add(action)

@@ -1,12 +1,9 @@
 import numpy as np
 import random
-from copy import deepcopy
 from itertools import permutations
 from tqdm import tqdm
-from collections import defaultdict
 from pluribus.cfr.vanilla_cfr import VanillaCFR
 from pluribus.cfr.node import InfoSet
-from pluribus.cfr.util import pickle_dict
 
 class MonteCarloCFR(VanillaCFR):
     """An object to run Monte Carlo Counter Factual Regret 
@@ -48,12 +45,10 @@ class MonteCarloCFR(VanillaCFR):
         self.regret_minimum = -300000
         self.strategy_interval = 100
         self.prune_threshold = 200
-        self.discount_interval = 10
+        self.discount_interval = 100
         self.lcfr_threshold = 400
         self.continuation = set(('1', '2', '3', '4'))
-        
-        self.node_map = defaultdict(pickle_dict)
-        
+
     def train(self, cards, iterations):
         """Runs MonteCarloCFR and prints the calculated strategies
         
@@ -82,12 +77,7 @@ class MonteCarloCFR(VanillaCFR):
                     self.mccfr(player, state)
 
             if t < self.lcfr_threshold and t % self.discount_interval == 0:
-                discount = (t/self.discount_interval)/(t/self.discount_interval+ 1)
-                for player in range(self.num_players):
-                    player_nodes = self.node_map[player]
-                    for node in player_nodes.values():
-                        node.regret_sum = {key:value * discount for key,value in node.regret_sum.items()}
-                        node.strategy_sum = {key:value * discount for key,value in node.strategy_sum.items()}
+                self.discount(t)
 
         expected_utilities = self.expected_utility(cards)
         for player in range(self.num_players):
@@ -107,6 +97,14 @@ class MonteCarloCFR(VanillaCFR):
 
                 else:
                     print("{}:\t F: {} C: {} R: {}".format(key, strategy['F'], strategy['C'], strategy['R']))
+
+    def discount(self, t):
+        discount = (t/self.discount_interval)/((t/self.discount_interval)+ 1)
+        for player in range(self.num_players):
+            player_nodes = self.node_map[player]
+            for node in player_nodes.values():
+                node.regret_sum = {key:value * discount for key,value in node.regret_sum.items()}
+                node.strategy_sum = {key:value * discount for key,value in node.strategy_sum.items()}
 
     def mccfr(self, player, state, prune=False):
         """Main function that runs the MonteCarloCFR
@@ -128,7 +126,8 @@ class MonteCarloCFR(VanillaCFR):
         
         if curr_player == player:
             info_set = state.info_set
-            node = self.node_map[curr_player][info_set]
+            player_nodes = self.node_map.setdefault(curr_player, {})
+            node = player_nodes.setdefault(info_set, InfoSet(self.actions))
 
             valid_actions = state.valid_actions
             strategy = node.strategy(valid_actions)
@@ -165,7 +164,8 @@ class MonteCarloCFR(VanillaCFR):
 
         else:
             info_set = state.info_set
-            node = self.node_map[curr_player][info_set]
+            player_nodes = self.node_map.setdefault(curr_player, {})
+            node = player_nodes.setdefault(info_set, InfoSet(self.actions))
 
             valid_actions = state.valid_actions
             strategy = node.strategy(valid_actions)
@@ -195,21 +195,25 @@ class MonteCarloCFR(VanillaCFR):
         curr_player = state.turn
         if curr_player == player:
             info_set = state.info_set
-            node = self.node_map[curr_player][info_set]
-
+            player_nodes = self.node_map.setdefault(curr_player, {})
+            node = player_nodes.setdefault(info_set, InfoSet(self.actions))
+            
             valid_actions = state.valid_actions
             strategy = node.strategy(valid_actions)
 
             actions = list(strategy.keys())
             prob = list(strategy.values())
             random_action = random.choices(actions, weights=prob)[0]
+
             node.strategy_sum[random_action] += 1
+
             new_state = state.add(player, random_action)
             self.update_strategy(player, new_state)
 
         else:
             info_set = state.info_set
-            node = self.node_map[curr_player][info_set]
+            player_nodes = self.node_map.setdefault(curr_player, {})
+            node = player_nodes.setdefault(info_set, InfoSet(self.actions))
 
             valid_actions = state.valid_actions
             for a in valid_actions:
@@ -242,7 +246,6 @@ class MonteCarloCFR(VanillaCFR):
 
         return self.strategy
 
-
     def subgame_mccfr(self, player, tree_node, prune=False):
         if tree_node.state.is_terminal:
             utility = tree_node.state.payoff()
@@ -266,12 +269,12 @@ class MonteCarloCFR(VanillaCFR):
                     for a in valid_actions:
                         if prune:
                             if node.regret_sum[a] > self.regret_minimum:
-                                calculated_util = tree_node.value(self.node_map, a)
+                                calculated_util = tree_node.value(curr_player, self.node_map, a)
                                 utilities[a] = calculated_util[curr_player]
                                 expected_value += calculated_util * strategy[a]
                                 explored.add(a)
                         else:
-                            calculated_util = tree_node.value(self.node_map, a)
+                            calculated_util = tree_node.value(curr_player, self.node_map, a)
                             utilities[a] = calculated_util[curr_player]
                             expected_value += calculated_util * strategy[a]
                 else:
@@ -317,7 +320,7 @@ class MonteCarloCFR(VanillaCFR):
                 prob = list(strategy.values())
                 random_action = random.choices(actions, weights=prob)[0]
                 if tree_node.is_leaf:
-                    calculated_util = tree_node.value(self.node_map, random_action)
+                    calculated_util = tree_node.value(curr_player, self.node_map, random_action)
                     return calculated_util
                 else:
                     next_tree_node = tree_node.children[random_action]
@@ -441,6 +444,6 @@ class MonteCarloCFR(VanillaCFR):
             return util
 
         except:
-            raise UserWarning("\nUnexplored information set: {}\
+            print("\nUnexplored information set: {}\
                 \nYou may need to train for more iterations to reach all possible states".format(info_set))
             

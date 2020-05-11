@@ -130,7 +130,7 @@ class State:
             valid = [a for a in self.actions if 'R' not in a]
             return set(valid)
 
-    def add(self, player, action, copy=True):
+    def add(self, player, action, deep=True):
         """Adds a new action to the history and returns a new hand
 
         Args:
@@ -140,8 +140,8 @@ class State:
         Returns:
             new_hand: a modified Hand object
         """
-        if copy:
-            new_hand = deepcopy(self)
+        if deep:
+            new_hand = copy(self)
         else: 
             new_hand = self
 

@@ -72,7 +72,8 @@ class NestedSearch:
         info_set = self.game_state.info_set
         player_nodes = self.strategy[self.pluribus]
         node = player_nodes[info_set]
-        strategy = node.avg_strategy()
+        valid_actions = self.game_state.valid_actions
+        strategy = node.strategy(valid_actions)
         actions = list(strategy.keys())
         prob = list(strategy.values())
 

@@ -1,5 +1,6 @@
 import random
 import numpy as np
+import multiprocessing as mp
 from itertools import permutations
 from pluribus.cfr.node import InfoSet
 from pluribus.game.state import LeducState as State
@@ -20,48 +21,51 @@ class Node:
         self.children = {}
         self._value = {}
         self.renorm_mapping = {'2': 'F', '3':'C', '4':'R'}
+        self.prob_dist = {}
 
     def __repr__(self):
         return self.state.__repr__() +  " (" + str(self.state.cards) + ")" 
 
-    def value(self, strategy, action):
+    def value(self, player, strategy, action):
         try:
             return self._value[action]
         except:
-            self._value[action] = self.rollout(strategy, action)
+            # can we use multiprocessing here? 
+            self._value[action] = self.rollout(player, strategy, action)
             return self._value[action]
 
-    def rollout(self, strategy, action):
+    def rollout(self, player, strategy, action):
         num_players = self.state.num_players
         value_estimate = np.zeros(num_players)
         self.node_map = strategy
         playout = self.playout
         s = self.state
-        for _ in range(100):
-            state = copy(s)
-            value_estimate += playout(state, action)
-
+        states = [(player, copy(s), action) for _ in range(100)]
+        with mp.Pool(64) as p:
+            value_estimate = np.sum(p.starmap(playout, states))
+            
         return value_estimate/100
 
-    def playout(self, state, action):
+    def playout(self, player, state, action):
         if state.is_terminal:
             return np.array(state.payoff())
         
-        player = state.turn
+        curr_player = state.turn
         info_set = state.info_set
-        node = self.node_map[player][info_set]
+        node = self.node_map[curr_player][info_set]
 
         valid_actions = state.valid_actions
         strategy = node.strategy(valid_actions)
-        if action in self.renorm_mapping.keys():
-            strategy = self.bias_strategy(strategy, action, valid_actions)
+        if curr_player == player:
+            if action in self.renorm_mapping.keys():
+                strategy = self.bias_strategy(strategy, action, valid_actions)
 
         actions = list(strategy.keys())
         prob = list(strategy.values())
         random_action = random.choices(actions, weights=prob)[0]
-        new_state = state.add(player, random_action, copy=False)
+        new_state = state.add(curr_player, random_action, deep=False)
 
-        return self.playout(new_state, action)
+        return self.playout(player, new_state, action)
 
     def bias_strategy(self, strategy, action, valid):
         bias = self.renorm_mapping[action]
@@ -107,8 +111,12 @@ class Subgame:
                 info_set = curr.state.info_set
                 node = strategy[player][info_set]
                 state = curr.state
-                turn = state.turn
                 valid_actions = state.valid_actions
+                strat = node.strategy(valid_actions)
+                curr.prob_dist = strategy
+
+                turn = state.turn
+                
                 children = {action:Node(state.add(turn, action), start_round) for action in valid_actions}
                 curr.children = children
                 stack.extend(children.values())
