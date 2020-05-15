@@ -21,13 +21,18 @@ class NestedSearch:
     @property
     def turn(self):
         return self.game_state.turn
+
+    @property
+    def action(self):
+        return self.game_state.valid_actions
+
     @property
     def terminal(self):
         return self.game_state.is_terminal
 
     @property
     def info_set(self):
-        return self.game_state.info_set(self.turn)
+        return self.game_state.info_set
 
     @property
     def payoff(self):
@@ -37,36 +42,39 @@ class NestedSearch:
         subgame = Subgame(self.public_state)
         tree = subgame.build_tree(self.strategy)
         strat = self.strategy
-        for player in strat:
-            for info_set in strat[player]:
-                strat[player][info_set].clear()
 
         subgame_strategy = self.mccfr.subgame_solve(tree, strat, 1000)
 
-        # for player in self.strategy:
-        #     strat = self.strategy[player]
-        #     for key in subgame_strategy:
-        #         if key not in strat:
-        #             strat[key] = subgame_strategy[key]
-        #         else:
-        #             strat[key].strategy_sum += subgame_strategy[key].strategy_sum
+        for player in self.strategy:
+            strat = self.strategy[player]
+            for key in subgame_strategy[player]:
+                if key not in strat:
+                    strat[key] = subgame_strategy[player][key]
+                else:
+                    strat[key].strategy_sum = {k:value + subgame_strategy[player][key].strategy_sum[k] for k, value in strat[key].strategy_sum.items()}
 
     def opponent_turn(self, action):
         player = self.turn
         info_set = self.game_state.info_set
         node = self.strategy[player][info_set]
-        if action not in node.curr_strategy.keys():
-            public_state = self.game_state.public_state
+        
+        amount = None
+        if len(action) > 1:
+            amount = int(action[:-1])
+
+        if action not in node.curr_strategy.keys() and amount != self.public_state.raise_size[self.public_state.round]:
+            self.public_state.actions.add(action)
+            public_state = self.public_state.public_state
             for state, node in self.strategy[player].items():
                 if public_state in state:
                     node.add_action(action)
 
             self.search()
+
         if self.verbose:
             print("player {} played {}".format(player, action), flush=True)
 
         self.game_state = self.game_state.add(player, action)
-        self.check_new_round()
 
     def traverser_turn(self):
         info_set = self.game_state.info_set
@@ -83,7 +91,8 @@ class NestedSearch:
 
         self.game_state = self.game_state.add(self.pluribus, action)
         player_nodes[info_set].is_frozen = True
-        self.check_new_round()
+
+        return action
 
     def check_new_round(self):
         if self.terminal:
@@ -96,11 +105,13 @@ class NestedSearch:
                 else:
                     print("Player {} won. They won {}".format(self.game_state.winners, max(payoffs)))
             
-            return
+            return True
 
         if self.game_state.round > self.public_state.round:
             if self.verbose:
-
                 print("New round. The current state of the game is {}".format(self.game_state.public_state))
             self.public_state = self.game_state
             self.search()
+            return True
+
+        return False

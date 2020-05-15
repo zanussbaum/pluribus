@@ -37,7 +37,7 @@ class State:
         self.num_raises = json['num_raises']
         self.eval = json['hand_eval']
         self.raise_size = json['raise_size']
-        self.actions = json['actions']
+        self.actions = set(json['actions'])
         self.json = json
 
     def __repr__(self):

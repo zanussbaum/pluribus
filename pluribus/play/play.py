@@ -1,6 +1,7 @@
 import pickle
 import random
 import sys
+import os
 import numpy as np
 from pluribus.search.search import NestedSearch
 from pluribus.cfr.mccfr import MonteCarloCFR
@@ -20,7 +21,7 @@ class Game:
 
         self.mccfr = MonteCarloCFR(settings)
         try:
-            with open('../blueprint/leduc_strat.p', 'rb') as f:
+            with open('pluribus/blueprint/leduc_strat.p', 'rb') as f:
                 blueprint = pickle.load(f)
 
             self.mccfr.node_map = blueprint
@@ -29,18 +30,14 @@ class Game:
             print('\n\n{}\nNo blueprint strategy was found.\n\
                 \nCreating a new one\n{}\n\n'.format('*'*100, '*'*100)) 
            
-            self.mccfr.train(self.cards, 100000)
+            self.mccfr.train(self.cards, 10000)
 
             
-            
-            with open('../blueprint/leduc_strat.p', 'wb') as f:
+            with open('pluribus/blueprint/leduc_strat.p', 'wb') as f:
                 pickle.dump(self.mccfr.node_map, f)
 
         self.state_json = self.mccfr.state_json
         self.state_json['cards'] = self.cards
-
-    def startup(self):
-        pass
 
     def _handle_action(self):
         valid = False
@@ -74,24 +71,27 @@ class Game:
 
         return opp_action
 
-    def play(self):
+    def start_game(self):
         print('\nshuffling cards\n')
         np.random.shuffle(self.cards)
         print("Cards are {}".format(self.cards))
         state = LeducState(self.state_json)
         self.search = NestedSearch(self.mccfr, state, 1)
 
-        while not self.search.terminal:
-            turn = self.search.turn
+    def state(self):
+        if not self.search.terminal:
+            return self.search.turn
 
-            if turn == 0:
-                opp_action = self._handle_action()
-                self.search.opponent_turn(opp_action)
+        return -1
 
-            else:
-                self.search.traverser_turn()
+    def user_action(self, action):
+        self.search.opponent_turn(action)
 
-                
+    def pluribus_action(self):
+        action = self.search.traverser_turn()
+        return action
+
+
 if __name__ == '__main__':
     Game().play()
        

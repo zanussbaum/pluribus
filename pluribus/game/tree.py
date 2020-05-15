@@ -9,10 +9,6 @@ from pluribus.game.card import Card
 from copy import copy
 from tqdm import tqdm
 
-import pickle
-from pluribus.cfr.mccfr import MonteCarloCFR
-
-
 class Node:
     def __init__(self, state, start_round):
         self.state = state
@@ -30,42 +26,41 @@ class Node:
         try:
             return self._value[action]
         except:
-            # can we use multiprocessing here? 
             self._value[action] = self.rollout(player, strategy, action)
             return self._value[action]
 
     def rollout(self, player, strategy, action):
         num_players = self.state.num_players
-        value_estimate = np.zeros(num_players)
+        self.value_estimate = np.zeros(num_players)
         self.node_map = strategy
         playout = self.playout
         s = self.state
-        states = [(player, copy(s), action) for _ in range(100)]
-        with mp.Pool(64) as p:
-            value_estimate = np.sum(p.starmap(playout, states))
-            
-        return value_estimate/100
+        states = [copy(s) for _ in range(100)]
+        self.value_estimate = self.playout(player, states, action)
 
-    def playout(self, player, state, action):
-        if state.is_terminal:
-            return np.array(state.payoff())
-        
-        curr_player = state.turn
-        info_set = state.info_set
-        node = self.node_map[curr_player][info_set]
+        return self.value_estimate / 100
 
-        valid_actions = state.valid_actions
-        strategy = node.strategy(valid_actions)
-        if curr_player == player:
-            if action in self.renorm_mapping.keys():
-                strategy = self.bias_strategy(strategy, action, valid_actions)
+    def playout(self, player, states, action):
+        util = np.zeros(self.state.num_players)
+        for state in states:
+            while not state.is_terminal:
+                curr_player = state.turn
+                info_set = state.info_set
+                node = self.node_map[curr_player][info_set]
 
-        actions = list(strategy.keys())
-        prob = list(strategy.values())
-        random_action = random.choices(actions, weights=prob)[0]
-        new_state = state.add(curr_player, random_action, deep=False)
+                valid_actions = state.valid_actions
+                strategy = node.strategy(valid_actions)
+                if curr_player == player:
+                    if action in self.renorm_mapping.keys():
+                        strategy = self.bias_strategy(strategy, action, valid_actions)
 
-        return self.playout(player, new_state, action)
+                actions = list(strategy.keys())
+                prob = list(strategy.values())
+                random_action = random.choices(actions, weights=prob)[0]
+                state = state.add(curr_player, random_action, deep=False)
+            payoff = np.array(state.payoff())
+            util += payoff
+        return util
 
     def bias_strategy(self, strategy, action, valid):
         bias = self.renorm_mapping[action]
@@ -109,10 +104,8 @@ class Subgame:
             if not curr.is_leaf:
                 player = curr.state.turn
                 info_set = curr.state.info_set
-                node = strategy[player][info_set]
                 state = curr.state
                 valid_actions = state.valid_actions
-                strat = node.strategy(valid_actions)
                 curr.prob_dist = strategy
 
                 turn = state.turn
@@ -122,25 +115,3 @@ class Subgame:
                 stack.extend(children.values())
 
         return self.root
-
-if __name__ == '__main__':
-    settings = {'num_players':2, 'num_actions':3, 'hand_eval': leduc_eval,
-            'num_rounds':2, 'num_raises':2, 'raise_size':[2,4],
-            'num_cards': 3, 'game': 'leduc', 'state': State
-        }
-
-    mccfr = MonteCarloCFR(settings)
-       
-    with open('../blueprint/leduc_strat.p', 'rb') as f:
-        blueprint = pickle.load(f)
-    mccfr.node_map = blueprint
-    mccfr.state_json['cards'] = [Card(12, 1), Card(13, 1), Card(14, 1), Card(12, 2), Card(13, 2), Card(14, 2)]
-    state = State(mccfr.state_json)
-    subgame = Subgame(state)
-    tree = subgame.build_tree(blueprint)
-    root = np.random.choice(tree.children)
-
-    while not root.is_leaf:
-        root = root.children['C']
-
-    root.value(blueprint, '1')

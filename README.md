@@ -1,5 +1,7 @@
 # Pluribus - A Multiplayer agent to play Poker variants
-### This repo will hold an implementation of pure Python implementation of Pluribus, Facebook's No-Limit 6-player Hold 'Em Poker Bot.
+### This repo will hold an implementation of a pure Python implementation of Pluribus, Facebook's No-Limit 6-player Hold 'Em Poker Bot.
+
+Given the obvious speed limitations of Python, this currently hosts a non-abstracted version of Leduc Hold'em
 
 [Kuhn Poker](https://en.wikipedia.org/wiki/Kuhn_poker) 
 ===
@@ -26,7 +28,7 @@ Implementation of Pluribus
 - [ ] Depth Limited Search
     * Blueprint strategy calculated to get coarse grained strategy
     * Search from all opponent actions to find best response
-    - [ ] Real-time search Leduc Poker
+    - [x] Real-time search Leduc Poker
     - [ ] Real-time search Hold'em
 
 - [ ] Action and Card Abstraction

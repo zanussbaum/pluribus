@@ -3,4 +3,5 @@
 *.egg-info
 *.p
 *.lprof
-
+*__pycache__
+flask_session

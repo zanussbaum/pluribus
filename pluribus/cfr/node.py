@@ -86,12 +86,10 @@ class InfoSet(Node):
     def __init__(self, actions):
         super().__init__(actions)
         self.is_frozen = False
-        self.actions = set(actions)
+        self.actions = set(actions) | set(("1", "2", "3", "4"))
         self.regret_sum = {action:0 for action in self.actions}
         self.curr_strategy = {action:0 for action in self.actions}
         self.strategy_sum = {action:0 for action in self.actions}
-
-        self.lock = mp.Lock()
 
     def strategy(self, actions, weight=1):
         """Calculates the new strategy based on regrets
@@ -103,6 +101,10 @@ class InfoSet(Node):
         Returns:
             strategy: a numpy array of the current strategy
         """
+        difference = actions - self.actions
+        for a in difference:
+            self.add_action(a)
+        
         m = max
         s = sum
         strat = {action:m(value, 0) for action, value in self.regret_sum.items()}
@@ -115,7 +117,20 @@ class InfoSet(Node):
             strat = {key:(1/num_valid if key in actions else 0) for key, value in strat.items()}
 
         return strat
-    
+
+    def avg_strategy(self):
+        norm_sum = sum([value for key, value in self.strategy_sum.items()])
+
+        if norm_sum > 0:
+            avg_strategy = dict((key, self.strategy_sum[key]/norm_sum) for key in self.strategy_sum.keys() if not key.isdigit())
+        else:
+            valid_actions = sum([1 for k in self.actions if not k.isdigit()])
+            avg_strategy = dict((key, 1/valid_actions) for key in self.strategy_sum.keys() if not key.isdigit())
+
+        self.curr_strategy = avg_strategy
+        
+        return avg_strategy
+
     def add_action(self, action):
         self.actions.add(action)
         self.regret_sum[action] = 0

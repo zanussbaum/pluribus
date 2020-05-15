@@ -2,6 +2,7 @@ import numpy as np
 import random
 from itertools import permutations
 from tqdm import tqdm
+from collections import defaultdict
 from pluribus.cfr.vanilla_cfr import VanillaCFR
 from pluribus.cfr.node import InfoSet
 
@@ -60,7 +61,7 @@ class MonteCarloCFR(VanillaCFR):
             iterations: int for number of iterations to run
         """
         self.state_json['cards'] = cards
-        shuffle = np.random.shuffle
+        shuffle = random.shuffle
         for t in tqdm(range(1, iterations+1), desc='Training'):
             shuffle(cards)
             for player in range(self.num_players):
@@ -68,7 +69,7 @@ class MonteCarloCFR(VanillaCFR):
                 if t % self.strategy_interval == 0:
                     self.update_strategy(player, state)
                 if t > self.prune_threshold:
-                    will_prune = np.random.random()
+                    will_prune = random.random()
                     if will_prune < .05:
                         self.mccfr(player, state)
                     else:
@@ -263,6 +264,7 @@ class MonteCarloCFR(VanillaCFR):
                 expected_value = np.zeros(self.num_players)
                 utilities = {action:0 for action in valid_actions}
                 if tree_node.is_leaf:
+                    # need to somehow have actions for continuation strategy
                     if prune:
                         explored = set()
 
@@ -431,8 +433,8 @@ class MonteCarloCFR(VanillaCFR):
         try:
             player = state.turn
             info_set = state.info_set
-            player_nodes = self.node_map[player]
-            node = player_nodes[info_set]
+            player_nodes = self.node_map.setdefault(player, {})
+            node = player_nodes.setdefault(info_set, InfoSet(self.actions))
 
             strategy = node.avg_strategy()
             util = np.zeros(self.num_players)
@@ -444,6 +446,6 @@ class MonteCarloCFR(VanillaCFR):
             return util
 
         except:
-            print("\nUnexplored information set: {}\
+            raise UserWarning("\nUnexplored information set: {}\
                 \nYou may need to train for more iterations to reach all possible states".format(info_set))
             
