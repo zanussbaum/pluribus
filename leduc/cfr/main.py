@@ -1,12 +1,12 @@
 import argparse
 import numpy as np
 import logging
-from pluribus.cfr.regret_min import RegretMin
-from pluribus.cfr.vanilla_cfr import VanillaCFR
-from pluribus.cfr.mccfr import MonteCarloCFR
-from pluribus.game.card import Card
-from pluribus.game.state import State, LeducState
-from pluribus.game.hand_eval import kuhn_eval, leduc_eval
+from leduc.cfr.regret_min import RegretMin
+from leduc.cfr.vanilla_cfr import VanillaCFR
+from leduc.cfr.mccfr import MonteCarloCFR
+from leduc.game.card import Card
+from leduc.game.state import State, LeducState
+from leduc.game.hand_eval import kuhn_eval, leduc_eval
 
 
 parser = argparse.ArgumentParser(description='Counterfactual Regret Minimization')

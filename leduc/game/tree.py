@@ -2,10 +2,10 @@ import random
 import numpy as np
 import multiprocessing as mp
 from itertools import permutations
-from pluribus.cfr.node import InfoSet
-from pluribus.game.state import LeducState as State
-from pluribus.game.hand_eval import leduc_eval
-from pluribus.game.card import Card
+from leduc.cfr.node import InfoSet
+from leduc.game.state import LeducState as State
+from leduc.game.hand_eval import leduc_eval
+from leduc.game.card import Card
 from copy import copy
 from tqdm import tqdm
 

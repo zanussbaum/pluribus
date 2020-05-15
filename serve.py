@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, session, flash, redirect
 from flask_socketio import SocketIO, join_room, leave_room, emit
-from pluribus.play.play import Game
+from leduc.play.play import Game
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'poker'

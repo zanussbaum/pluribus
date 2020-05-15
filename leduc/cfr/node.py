@@ -1,6 +1,6 @@
 import numpy as np
 import multiprocessing as mp
-from pluribus.cfr.regret_min import RegretMin
+from leduc.cfr.regret_min import RegretMin
 
 
 class Node(RegretMin):

@@ -4,7 +4,7 @@ import sys
 from itertools import permutations
 from tqdm import tqdm
 from collections import defaultdict
-from pluribus.cfr.node import Node
+from leduc.cfr.node import Node
 
 class VanillaCFR:
     """An object to run Vanilla Counterfactual regret on Kuhn poker, or other games

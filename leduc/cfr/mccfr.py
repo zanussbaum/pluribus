@@ -3,8 +3,8 @@ import random
 from itertools import permutations
 from tqdm import tqdm
 from collections import defaultdict
-from pluribus.cfr.vanilla_cfr import VanillaCFR
-from pluribus.cfr.node import InfoSet
+from leduc.cfr.vanilla_cfr import VanillaCFR
+from leduc.cfr.node import InfoSet
 
 class MonteCarloCFR(VanillaCFR):
     """An object to run Monte Carlo Counter Factual Regret 

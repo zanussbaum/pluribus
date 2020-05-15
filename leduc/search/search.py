@@ -1,7 +1,7 @@
 import random
 from copy import deepcopy
-from pluribus.cfr.mccfr import MonteCarloCFR
-from pluribus.game.tree import Subgame
+from leduc.cfr.mccfr import MonteCarloCFR
+from leduc.game.tree import Subgame
 class NestedSearch:
     # we need to figure out a way to 'freeze' infosets for actions that have already occured
     # basically we don't want to calculate new strategy for that action just everything after
@@ -13,7 +13,7 @@ class NestedSearch:
         self.public_state = hand
         self.mccfr = mccfr
         self.strategy = mccfr.node_map
-        self.pluribus = traverser
+        self.leduc = traverser
         self.cards = deepcopy(hand.cards)
         self.blueprint = deepcopy(mccfr.node_map)
         self.verbose = verbose
@@ -78,7 +78,7 @@ class NestedSearch:
 
     def traverser_turn(self):
         info_set = self.game_state.info_set
-        player_nodes = self.strategy[self.pluribus]
+        player_nodes = self.strategy[self.leduc]
         node = player_nodes[info_set]
         valid_actions = self.game_state.valid_actions
         strategy = node.strategy(valid_actions)
@@ -87,9 +87,9 @@ class NestedSearch:
 
         action = random.choices(actions, weights=prob)[0]
         if self.verbose:
-            print("pluribus played {}".format(action))
+            print("leduc played {}".format(action))
 
-        self.game_state = self.game_state.add(self.pluribus, action)
+        self.game_state = self.game_state.add(self.leduc, action)
         player_nodes[info_set].is_frozen = True
 
         return action
