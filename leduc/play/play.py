@@ -30,7 +30,7 @@ class Game:
             print('\n\n{}\nNo blueprint strategy was found.\n\
                 \nCreating a new one\n{}\n\n'.format('*'*100, '*'*100)) 
            
-            self.mccfr.train(self.cards, 10000)
+            self.mccfr.train(self.cards, 20000)
 
             
             with open('pluribus/blueprint/leduc_strat.p', 'wb') as f:

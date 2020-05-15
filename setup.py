@@ -6,5 +6,5 @@ setup(name='pluribus',
       url='https://github.com/zanussbaum/pluribus',
       author='zanussbaum',
       license='MIT',
-      packages=find_namespace_packages(include=["pluribus.*"]),
+      packages=find_namespace_packages(include=["leduc.*"]),
       zip_safe=False)
