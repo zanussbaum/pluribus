@@ -4,4 +4,6 @@
 *.p
 *.lprof
 *__pycache__
+*.o
+main
 flask_session
