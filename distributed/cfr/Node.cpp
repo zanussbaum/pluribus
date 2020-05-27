@@ -2,8 +2,14 @@
 
 Node::Node(int numActions){
     regretSum.resize(numActions);
+    regretSum.setZero();
+
     strategySum.resize(numActions);
+    strategySum.setZero();
+
     strategy.resize(numActions);
+    strategy.setZero();
+
     mNumActions = numActions;
 };
 
@@ -13,6 +19,7 @@ Node::~Node(){
 Eigen::RowVectorXf Node::getAverageStrategy(){
     float normSum = 0;
     Eigen::RowVectorXf avgStrategy(mNumActions);
+    avgStrategy.setZero();
 
     for(int i=0; i < mNumActions; i++){
         normSum += strategySum[i];

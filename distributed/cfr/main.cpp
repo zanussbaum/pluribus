@@ -1,6 +1,5 @@
 #include <iostream>
 #include <chrono>
-
 #include "Trainer.hpp"
 
 int main(){
@@ -17,5 +16,13 @@ int main(){
             std::cout << "\n" + infoSet.first + "\n" << infoSet.second.getAverageStrategy() << "\n";
         }
     }
+    Eigen::RowVectorXf expectedUtility = train.expectedUtility();
+
+    for(int i=0; i<expectedUtility.size(); i++){
+        std::cout << "Player " << i << " utility \n";
+        std::cout << expectedUtility[i] << "\n";
+    }
+
+
     return 0;
 }

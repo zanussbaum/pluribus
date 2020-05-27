@@ -19,12 +19,12 @@ class State{
         std::vector<int> mBets;
         int mTurn;
         std::vector<std::vector<std::string>> mHistory;
+        int mNumPlayers;
 
     private:
         bool allCalledOrFolded();
         std::vector<bool> mIn;
         int mTotalRounds;
         int mRound;
-        int mNumPlayers;
 };
     
