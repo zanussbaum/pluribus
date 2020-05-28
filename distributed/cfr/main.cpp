@@ -1,5 +1,5 @@
 #include <iostream>
-#include <chrono>
+#include <valarray>
 #include "Trainer.hpp"
 
 int main(){
@@ -13,10 +13,14 @@ int main(){
     for(auto map: train.mNodeMap){
         std::cout << "\nplayer " << map.first << "\n";
         for(auto infoSet: map.second){
-            std::cout << "\n" + infoSet.first + "\n" << infoSet.second.getAverageStrategy() << "\n";
+            auto strat = infoSet.second.getAverageStrategy();
+            std::cout << "\n" + infoSet.first + "\n";
+            for(auto prob: strat){
+                std::cout << prob << "\t";
+            }
         }
     }
-    Eigen::RowVectorXf expectedUtility = train.expectedUtility();
+    std::valarray<float> expectedUtility = train.expectedUtility();
 
     for(int i=0; i<expectedUtility.size(); i++){
         std::cout << "Player " << i << " utility \n";

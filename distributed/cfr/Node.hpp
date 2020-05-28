@@ -1,17 +1,15 @@
-#include <vector>
-#include <eigen3/Eigen/Core>
+#include <valarray>
 
 class Node{
     public:
         Node(int numActions);
         ~Node();
-        Eigen::RowVectorXf getAverageStrategy();
-        Eigen::RowVectorXf getStrategy(float weight);
-        Eigen::RowVectorXf regretSum;
+        std::valarray<float> getAverageStrategy();
+        std::valarray<float> getStrategy(float weight);
+        std::valarray<float> regretSum;
         int mNumActions;
 
     private:
-        
-        Eigen::RowVectorXf strategySum;
-        Eigen::RowVectorXf strategy;
+        std::valarray<float> strategySum;
+        std::valarray<float> strategy;
 };

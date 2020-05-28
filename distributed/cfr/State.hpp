@@ -3,7 +3,7 @@
 #include <iostream>
 #include <algorithm>
 #include <numeric>
-#include <eigen3/Eigen/Core>
+#include <valarray>
 
 class State{
     public:
@@ -12,7 +12,7 @@ class State{
         ~State();
         std::string infoSet();
         bool isTerminal();
-        Eigen::RowVectorXf payoff();
+        std::valarray<float> payoff();
         
 
         std::vector<int> mCards;

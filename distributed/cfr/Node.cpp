@@ -1,14 +1,11 @@
 #include "Node.hpp"
 
 Node::Node(int numActions){
-    regretSum.resize(numActions);
-    regretSum.setZero();
+    regretSum = std::valarray<float>(numActions);
 
-    strategySum.resize(numActions);
-    strategySum.setZero();
+    strategySum = std::valarray<float>(numActions);
 
-    strategy.resize(numActions);
-    strategy.setZero();
+    strategy = std::valarray<float>(numActions);
 
     mNumActions = numActions;
 };
@@ -16,10 +13,9 @@ Node::Node(int numActions){
 Node::~Node(){
 };
 
-Eigen::RowVectorXf Node::getAverageStrategy(){
+std::valarray<float> Node::getAverageStrategy(){
     float normSum = 0;
-    Eigen::RowVectorXf avgStrategy(mNumActions);
-    avgStrategy.setZero();
+    std::valarray<float> avgStrategy(mNumActions);
 
     for(int i=0; i < mNumActions; i++){
         normSum += strategySum[i];
@@ -38,7 +34,7 @@ Eigen::RowVectorXf Node::getAverageStrategy(){
     return avgStrategy;
 };
 
-Eigen::RowVectorXf Node::getStrategy(float weight){
+std::valarray<float> Node::getStrategy(float weight){
     float normSum = 0;
 
     for(int i=0; i < mNumActions; i++){

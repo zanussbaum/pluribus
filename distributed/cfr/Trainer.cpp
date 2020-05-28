@@ -19,9 +19,9 @@ void Trainer::train(int iterations){
     }
 }
 
-Eigen::RowVectorXf Trainer::cfr(State state, std::vector<double> probs){
+std::valarray<float> Trainer::cfr(State state, std::vector<double> probs){
     if(state.isTerminal()){
-        Eigen::VectorXf util = state.payoff();
+        std::valarray<float> util = state.payoff();
         return util;
     }
 
@@ -33,17 +33,14 @@ Eigen::RowVectorXf Trainer::cfr(State state, std::vector<double> probs){
         mNodeMap[player].insert({infoSet, Node(2)});
     }
 
-    Eigen::RowVectorXf strategy = mNodeMap[player].at(infoSet).getStrategy(probs[player]);
+    std::valarray<float> strategy = mNodeMap[player].at(infoSet).getStrategy(probs[player]);
 
-    Eigen::RowVectorXf utilities(state.mNumPlayers);
-    utilities.setZero();
+    std::valarray<float> utilities(state.mNumPlayers);
 
-    Eigen::RowVectorXf nodeUtil(state.mNumPlayers);
-    nodeUtil.setZero();
+    std::valarray<float> nodeUtil(state.mNumPlayers);
 
     std::vector<std::string> actions = {"P", "B"};
-    Eigen::RowVectorXf returned;
-    returned.setZero();
+    std::valarray<float> returned;
     for(int i=0; i<actions.size(); i++){
         std::vector<double> newProbs = probs;
         newProbs[player] *= strategy[i]; 
@@ -68,9 +65,9 @@ Eigen::RowVectorXf Trainer::cfr(State state, std::vector<double> probs){
     return nodeUtil;
 };
 
-Eigen::RowVectorXf Trainer::expectedUtility(){
-    Eigen::RowVectorXf expectedUtility(2);
-    expectedUtility.setZero();
+std::valarray<float> Trainer::expectedUtility(){
+    std::valarray<float> expectedUtility(2);
+
     std::sort(mCards.begin(), mCards.end());
     int numPermutations = 0;
     do{
@@ -82,18 +79,17 @@ Eigen::RowVectorXf Trainer::expectedUtility(){
     return expectedUtility/numPermutations;
 };
 
-Eigen::RowVectorXf Trainer::traverseTree(State state){
+std::valarray<float> Trainer::traverseTree(State state){
     if(state.isTerminal()){
-        Eigen::VectorXf util = state.payoff();
+        std::valarray<float> util = state.payoff();
         return util;
     }
 
     int player = state.mTurn;
     std::string infoSet = state.infoSet();
-    Eigen::RowVectorXf strategy = mNodeMap[player].at(infoSet).getAverageStrategy();
+    std::valarray<float> strategy = mNodeMap[player].at(infoSet).getAverageStrategy();
 
-    Eigen::RowVectorXf expectedUtility(state.mNumPlayers);
-    expectedUtility.setZero();
+    std::valarray<float> expectedUtility(state.mNumPlayers);
 
     std::vector<std::string> actions = {"P", "B"};
     for(int i=0; i<actions.size(); i++){

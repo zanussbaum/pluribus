@@ -93,7 +93,7 @@ bool State::allCalledOrFolded(){
     return true;
 };
 
-Eigen::RowVectorXf State::payoff(){
+std::valarray<float> State::payoff(){
     int winner;
     int playersIn = std::count(mIn.begin(), mIn.end(), true);
     if(playersIn == 1){
@@ -128,13 +128,12 @@ Eigen::RowVectorXf State::payoff(){
 
     int pot = std::accumulate(mBets.begin(), mBets.end(), 0);
 
-    Eigen::VectorXf payoffs;
-    payoffs.resize(mNumPlayers);
+    std::valarray<float> payoffs(mNumPlayers);
     for(int i=0; i<mBets.size(); i++){
-        payoffs(i) = -mBets[i];
+        payoffs[i] = -mBets[i];
     }
 
-    payoffs(winner) += pot;
+    payoffs[winner] += pot;
 
     return payoffs;
 };

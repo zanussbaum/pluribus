@@ -12,9 +12,9 @@ class Trainer{
         void train(int iterations);
         std::vector<int> mCards;
         std::unordered_map<int, std::unordered_map<std::string, Node>> mNodeMap;
-        Eigen::RowVectorXf expectedUtility();
+        std::valarray<float> expectedUtility();
 
     private:
-        Eigen::RowVectorXf cfr(State state, std::vector<double> probs);
-        Eigen::RowVectorXf traverseTree(State state);
+        std::valarray<float> cfr(State state, std::vector<double> probs);
+        std::valarray<float> traverseTree(State state);
 };
