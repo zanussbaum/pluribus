@@ -2,7 +2,7 @@ OBJECTS = Node.o main.o State.o Trainer.o
 
 CC = clang++
 
-CXXFLAGS = -g -std=c++11
+CXXFLAGS = -g -std=c++17 -O0
 
 
 

@@ -18,7 +18,7 @@ class State{
         std::vector<int> mCards;
         std::vector<int> mBets;
         int mTurn;
-        std::vector<std::vector<std::string>> mHistory;
+        std::vector<std::vector<std::string> > mHistory;
         int mNumPlayers;
 
     private:
