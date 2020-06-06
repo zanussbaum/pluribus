@@ -48,11 +48,11 @@ void Trainer::mccfrTrain(int iterations){
             }
         }
         if(i < mLCFRThreshold && i % mDiscountInterval == 0){
-            float discount = (i/mDiscountInterval)/((i/mDiscountInterval) + 1);
+            float discount = (i/mDiscountInterval)/((i/mDiscountInterval) + 1.);
             for(auto map: mNodeMap){
                 std::unordered_map<std::string, Node> playerNodes = mNodeMap[map.first];
                 for(auto keyValue: playerNodes){
-                    // Node node = keyValue.second;
+                    Node node = keyValue.second;
                     keyValue.second.regretSum *= discount;
                     keyValue.second.strategySum *= discount;
                 }
@@ -122,13 +122,13 @@ std::valarray<float> Trainer::mccfr(State state, int player, bool prune){
         if(search == mNodeMap[player].end()){
             mNodeMap[player].insert({infoSet, Node(state.mNumPlayers)});
         }
-        // Node node = mNodeMap[player].at(infoSet);
+        Node node = mNodeMap[player].at(infoSet);
 
-        std::valarray<float> strategy = mNodeMap[player].at(infoSet).getStrategy();
+        std::valarray<float> strategy = node.getStrategy();
 
         std::valarray<float> utilities(state.mNumPlayers);
 
-        std::valarray<float> nodeUtil;
+        std::valarray<float> nodeUtil(state.mNumPlayers);
 
         std::vector<std::string> actions = {"P", "B"};
         std::valarray<float> returned;
@@ -148,7 +148,7 @@ std::valarray<float> Trainer::mccfr(State state, int player, bool prune){
                 auto search = explored.find(i);
                 if(search != explored.end()){
                     regret = utilities[i] - nodeUtil[currentPlayer];
-                    mNodeMap[player].at(infoSet).regretSum[i] += regret;
+                    node.regretSum[i] += regret;
                 }
             }
         }
@@ -160,12 +160,10 @@ std::valarray<float> Trainer::mccfr(State state, int player, bool prune){
             }
             for(int i=0; i<actions.size(); i++){
                 regret = utilities[i] - nodeUtil[currentPlayer];
-                mNodeMap[player].at(infoSet).regretSum[i] += regret;
+                node.regretSum[i] += regret;
             }  
         }
-
         return nodeUtil;
-
     }
     else{
         std::string infoSet = state.infoSet();
@@ -173,8 +171,8 @@ std::valarray<float> Trainer::mccfr(State state, int player, bool prune){
         if(search == mNodeMap[player].end()){
             mNodeMap[player].insert({infoSet, Node(state.mNumPlayers)});
         }
-        // Node node = mNodeMap[player].at(infoSet);
-        std::valarray<float> strategy = mNodeMap[player].at(infoSet).getStrategy();
+        Node node = mNodeMap[player].at(infoSet);
+        std::valarray<float> strategy = node.getStrategy();
         std::vector<std::string> actions = {"P", "B"};
 
         std::random_device rd;
@@ -197,7 +195,7 @@ void Trainer::updateStrategy(State state, int player){
         if(search == mNodeMap[player].end()){
             mNodeMap[player].insert({infoSet, Node(state.mNumPlayers)});
         }
-        // Node node = mNodeMap[player].at(infoSet);
+
         std::valarray<float> strategy = mNodeMap[player].at(infoSet).getStrategy();
         std::vector<std::string> actions = {"P", "B"};
 
