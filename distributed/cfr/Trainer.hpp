@@ -29,4 +29,6 @@ class Trainer{
         int mPruneThreshold = 200;
         int mDiscountInterval = 100;
         int mLCFRThreshold = 400;
+        std::random_device mRd;
+        std::mt19937 mActionEng;
 };

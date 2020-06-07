@@ -8,6 +8,9 @@ Trainer::Trainer(){
 Trainer::Trainer(int numPlayers){
     mCards = {1,2,3};
     mNumPlayers = numPlayers;
+
+    std::random_device mRd;
+    std::mt19937 mActionEng(mRd());
 };
 
 Trainer::~Trainer(){
@@ -29,7 +32,7 @@ void Trainer::mccfrTrain(int iterations){
     std::mt19937 randEng(rd());
     for(int i=1; i<=iterations; i++){
         std::shuffle(mCards.begin(), mCards.end(), randEng);
-        State state(2, 1, mCards);
+        State state(mNumPlayers, 1, mCards);
         for(int player=0; player<mNumPlayers;player++){
             if(i % mStrategyInterval == 0){
                 Trainer::updateStrategy(state, player);
@@ -40,7 +43,7 @@ void Trainer::mccfrTrain(int iterations){
                     Trainer::mccfr(state, player);
                 }
                 else{
-                    Trainer::mccfr(state, player, prune=true);
+                    Trainer::mccfr(state, player, true);
                 }
             }
             else{
@@ -52,7 +55,6 @@ void Trainer::mccfrTrain(int iterations){
             for(auto map: mNodeMap){
                 std::unordered_map<std::string, Node> playerNodes = mNodeMap[map.first];
                 for(auto keyValue: playerNodes){
-                    Node node = keyValue.second;
                     keyValue.second.regretSum *= discount;
                     keyValue.second.strategySum *= discount;
                 }
@@ -118,13 +120,12 @@ std::valarray<float> Trainer::mccfr(State state, int player, bool prune){
 
     if(currentPlayer == player){
         std::string infoSet = state.infoSet();
-        auto search = mNodeMap[player].find(infoSet);
-        if(search == mNodeMap[player].end()){
-            mNodeMap[player].insert({infoSet, Node(state.mNumPlayers)});
+        auto search = mNodeMap[currentPlayer].find(infoSet);
+        if(search == mNodeMap[currentPlayer].end()){
+            mNodeMap[currentPlayer].insert({infoSet, Node(state.mNumPlayers)});
         }
-        Node node = mNodeMap[player].at(infoSet);
 
-        std::valarray<float> strategy = node.getStrategy();
+        std::valarray<float> strategy = mNodeMap[currentPlayer].at(infoSet).getStrategy();
 
         std::valarray<float> utilities(state.mNumPlayers);
 
@@ -137,9 +138,9 @@ std::valarray<float> Trainer::mccfr(State state, int player, bool prune){
         if(prune){
             std::set<int> explored;
             for(int i=0; i<actions.size(); i++){
-                if(mNodeMap[player].at(infoSet).regretSum[i] > mRegretMinimum){
+                if(mNodeMap[currentPlayer].at(infoSet).regretSum[i] > mRegretMinimum){
                     returned = mccfr(State(state, actions[i]), player, prune);
-                    utilities[i] = returned[player];
+                    utilities[i] = returned[currentPlayer];
                     nodeUtil += returned * strategy[i];
                     explored.insert(i);
                 }
@@ -148,37 +149,35 @@ std::valarray<float> Trainer::mccfr(State state, int player, bool prune){
                 auto search = explored.find(i);
                 if(search != explored.end()){
                     regret = utilities[i] - nodeUtil[currentPlayer];
-                    node.regretSum[i] += regret;
+                    mNodeMap[currentPlayer].at(infoSet).regretSum[i] += regret;
                 }
             }
         }
         else{
             for(int i=0; i<actions.size(); i++){
                 returned = mccfr(State(state, actions[i]), player, prune);
-                utilities[i] = returned[player];
+                utilities[i] = returned[currentPlayer];
                 nodeUtil += returned * strategy[i]; 
             }
             for(int i=0; i<actions.size(); i++){
                 regret = utilities[i] - nodeUtil[currentPlayer];
-                node.regretSum[i] += regret;
+                mNodeMap[currentPlayer].at(infoSet).regretSum[i] += regret;
             }  
         }
         return nodeUtil;
     }
     else{
         std::string infoSet = state.infoSet();
-        auto search = mNodeMap[player].find(infoSet);
-        if(search == mNodeMap[player].end()){
-            mNodeMap[player].insert({infoSet, Node(state.mNumPlayers)});
+        auto search = mNodeMap[currentPlayer].find(infoSet);
+        if(search == mNodeMap[currentPlayer].end()){
+            mNodeMap[currentPlayer].insert({infoSet, Node(state.mNumPlayers)});
         }
-        Node node = mNodeMap[player].at(infoSet);
+        Node node = mNodeMap[currentPlayer].at(infoSet);
         std::valarray<float> strategy = node.getStrategy();
         std::vector<std::string> actions = {"P", "B"};
 
-        std::random_device rd;
-        std::mt19937 gen(rd());
         std::discrete_distribution<int> random_choice(std::begin(strategy), std::end(strategy));
-        auto action = random_choice(gen);
+        auto action = random_choice(mActionEng);
         return mccfr(State(state, actions[action]), player, prune);
     }
 };
@@ -191,20 +190,17 @@ void Trainer::updateStrategy(State state, int player){
 
     if(currentPlayer == player){
         std::string infoSet = state.infoSet();
-        auto search = mNodeMap[player].find(infoSet);
-        if(search == mNodeMap[player].end()){
-            mNodeMap[player].insert({infoSet, Node(state.mNumPlayers)});
+        auto search = mNodeMap[currentPlayer].find(infoSet);
+        if(search == mNodeMap[currentPlayer].end()){
+            mNodeMap[currentPlayer].insert({infoSet, Node(2)});
         }
-
-        std::valarray<float> strategy = mNodeMap[player].at(infoSet).getStrategy();
+        std::valarray<float> strategy = mNodeMap[currentPlayer].at(infoSet).getStrategy();
         std::vector<std::string> actions = {"P", "B"};
 
-        std::random_device rd;
-        std::mt19937 gen(rd());
         std::discrete_distribution<int> random_choice(std::begin(strategy), std::end(strategy));
-        auto action = random_choice(gen);
+        auto action = random_choice(mActionEng);
 
-        mNodeMap[player].at(infoSet).strategySum[action] += 1;
+        mNodeMap[currentPlayer].at(infoSet).strategySum[action] += 1;
         updateStrategy(State(state, actions[action]), player);
     }
     else{
