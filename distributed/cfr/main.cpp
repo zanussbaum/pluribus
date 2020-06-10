@@ -32,10 +32,13 @@ int main(){
     std::cout <<"duration "<< duration/pow(10, 6) <<"\n";
 
     std::cout << "\nRunning MCCFR";
-    
-    Trainer train2(2);
+
+    std::vector<std::string> actions;
+    actions.push_back("P");
+    actions.push_back("B");
+    MCCFRTrainer train2(2, actions);
     t1 = std::chrono::high_resolution_clock::now();
-    train2.mccfrTrain(10000);
+    train2.train(10000);
     t2 = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
     
@@ -46,7 +49,7 @@ int main(){
             auto strat = infoSet.second.getAverageStrategy();
             std::cout << "\n" + infoSet.first + "\n";
             for(auto prob: strat){
-                std::cout << prob << "\t";
+                std::cout << prob.second << "\t";
             }
         }
     }
