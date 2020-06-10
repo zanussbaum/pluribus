@@ -27,42 +27,6 @@ void Trainer::train(int iterations){
     }
 }
 
-void Trainer::mccfrTrain(int iterations){
-    std::random_device rd;
-    std::mt19937 randEng(rd());
-    for(int i=1; i<=iterations; i++){
-        std::shuffle(mCards.begin(), mCards.end(), randEng);
-        State state(mNumPlayers, 1, mCards);
-        for(int player=0; player<mNumPlayers;player++){
-            if(i % mStrategyInterval == 0){
-                Trainer::updateStrategy(state, player);
-            }
-            if(i > mPruneThreshold){
-                float prune = (float) rand()/RAND_MAX;
-                if(prune < .05){
-                    Trainer::mccfr(state, player);
-                }
-                else{
-                    Trainer::mccfr(state, player, true);
-                }
-            }
-            else{
-                Trainer::mccfr(state, player);
-            }
-        }
-        if(i < mLCFRThreshold && i % mDiscountInterval == 0){
-            float discount = (i/mDiscountInterval)/((i/mDiscountInterval) + 1.);
-            for(auto map: mNodeMap){
-                std::unordered_map<std::string, Node> playerNodes = mNodeMap[map.first];
-                for(auto keyValue: playerNodes){
-                    keyValue.second.regretSum *= discount;
-                    keyValue.second.strategySum *= discount;
-                }
-            }
-        }
-    }
-}
-
 std::valarray<float> Trainer::cfr(State state, std::vector<double> probs){
     if(state.isTerminal()){
         std::valarray<float> util = state.payoff();
@@ -110,109 +74,8 @@ std::valarray<float> Trainer::cfr(State state, std::vector<double> probs){
     return nodeUtil;
 };
 
-std::valarray<float> Trainer::mccfr(State state, int player, bool prune){
-    if(state.isTerminal()){
-        std::valarray<float> util = state.payoff();
-        return util;
-    }
-
-    int currentPlayer = state.mTurn;
-
-    if(currentPlayer == player){
-        std::string infoSet = state.infoSet();
-        auto search = mNodeMap[currentPlayer].find(infoSet);
-        if(search == mNodeMap[currentPlayer].end()){
-            mNodeMap[currentPlayer].insert({infoSet, Node(state.mNumPlayers)});
-        }
-
-        std::valarray<float> strategy = mNodeMap[currentPlayer].at(infoSet).getStrategy();
-
-        std::valarray<float> utilities(state.mNumPlayers);
-
-        std::valarray<float> nodeUtil(state.mNumPlayers);
-
-        std::vector<std::string> actions = {"P", "B"};
-        std::valarray<float> returned;
-        float regret = 0.0;
-
-        if(prune){
-            std::set<int> explored;
-            for(int i=0; i<actions.size(); i++){
-                if(mNodeMap[currentPlayer].at(infoSet).regretSum[i] > mRegretMinimum){
-                    returned = mccfr(State(state, actions[i]), player, prune);
-                    utilities[i] = returned[currentPlayer];
-                    nodeUtil += returned * strategy[i];
-                    explored.insert(i);
-                }
-            }
-            for(int i=0; i<actions.size(); i++){
-                auto search = explored.find(i);
-                if(search != explored.end()){
-                    regret = utilities[i] - nodeUtil[currentPlayer];
-                    mNodeMap[currentPlayer].at(infoSet).regretSum[i] += regret;
-                }
-            }
-        }
-        else{
-            for(int i=0; i<actions.size(); i++){
-                returned = mccfr(State(state, actions[i]), player, prune);
-                utilities[i] = returned[currentPlayer];
-                nodeUtil += returned * strategy[i]; 
-            }
-            for(int i=0; i<actions.size(); i++){
-                regret = utilities[i] - nodeUtil[currentPlayer];
-                mNodeMap[currentPlayer].at(infoSet).regretSum[i] += regret;
-            }  
-        }
-        return nodeUtil;
-    }
-    else{
-        std::string infoSet = state.infoSet();
-        auto search = mNodeMap[currentPlayer].find(infoSet);
-        if(search == mNodeMap[currentPlayer].end()){
-            mNodeMap[currentPlayer].insert({infoSet, Node(state.mNumPlayers)});
-        }
-        Node node = mNodeMap[currentPlayer].at(infoSet);
-        std::valarray<float> strategy = node.getStrategy();
-        std::vector<std::string> actions = {"P", "B"};
-
-        std::discrete_distribution<int> random_choice(std::begin(strategy), std::end(strategy));
-        auto action = random_choice(mActionEng);
-        return mccfr(State(state, actions[action]), player, prune);
-    }
-};
-
-void Trainer::updateStrategy(State state, int player){
-    if(state.isTerminal()){
-        return;
-    }
-    int currentPlayer = state.mTurn;
-
-    if(currentPlayer == player){
-        std::string infoSet = state.infoSet();
-        auto search = mNodeMap[currentPlayer].find(infoSet);
-        if(search == mNodeMap[currentPlayer].end()){
-            mNodeMap[currentPlayer].insert({infoSet, Node(2)});
-        }
-        std::valarray<float> strategy = mNodeMap[currentPlayer].at(infoSet).getStrategy();
-        std::vector<std::string> actions = {"P", "B"};
-
-        std::discrete_distribution<int> random_choice(std::begin(strategy), std::end(strategy));
-        auto action = random_choice(mActionEng);
-
-        mNodeMap[currentPlayer].at(infoSet).strategySum[action] += 1;
-        updateStrategy(State(state, actions[action]), player);
-    }
-    else{
-        std::vector<std::string> actions = {"P", "B"};
-        for(int i=0; i<actions.size(); i++){
-            updateStrategy(State(state, actions[i]), player);
-        }
-    }
-}
-
 std::valarray<float> Trainer::expectedUtility(){
-    std::valarray<float> expectedUtility(2);
+    std::valarray<float> expectedUtility(mNumPlayers);
 
     std::sort(mCards.begin(), mCards.end());
     int numPermutations = 0;
@@ -235,7 +98,7 @@ std::valarray<float> Trainer::traverseTree(State state){
     std::string infoSet = state.infoSet();
     std::valarray<float> strategy = mNodeMap[player].at(infoSet).getAverageStrategy();
 
-    std::valarray<float> expectedUtility(state.mNumPlayers);
+    std::valarray<float> expectedUtility(mNumPlayers);
 
     std::vector<std::string> actions = {"P", "B"};
     for(int i=0; i<actions.size(); i++){

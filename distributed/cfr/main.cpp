@@ -1,11 +1,12 @@
 #include <iostream>
 #include <valarray>
 #include "Trainer.hpp"
+#include "MCCFRTrainer.hpp"
 
 int main(){
     std::cout << "Running Vanilla CFR";
 
-    Trainer train;
+    Trainer train(2);
     auto t1 = std::chrono::high_resolution_clock::now();
     train.train(10000);
     auto t2 = std::chrono::high_resolution_clock::now();
@@ -15,9 +16,9 @@ int main(){
     for(auto map: train.mNodeMap){
         std::cout << "\nplayer " << map.first << "\n";
         for(auto infoSet: map.second){
-            auto strat = infoSet.second.getAverageStrategy();
+            std::valarray<float> strat = infoSet.second.getAverageStrategy();
             std::cout << "\n" + infoSet.first + "\n";
-            for(auto prob: strat){
+            for(float prob: strat){
                 std::cout << prob << "\t";
             }
         }
