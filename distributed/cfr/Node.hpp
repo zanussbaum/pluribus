@@ -1,4 +1,7 @@
 #include <valarray>
+#include <unordered_map>
+#include <string>
+#include <vector>
 
 class Node{
     public:
@@ -12,6 +15,5 @@ class Node{
         int mNumActions;
 
     private:
-        
         std::valarray<float> strategy;
 };

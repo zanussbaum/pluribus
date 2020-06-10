@@ -4,7 +4,8 @@
 #include <algorithm>
 #include <numeric>
 #include <valarray>
-
+#ifndef STATE_HPP
+#define STATE_HPP
 class State{
     public:
         State(int numPlayers, int numRound, std::vector<int> cards);
@@ -28,3 +29,4 @@ class State{
         int mRound;
 };
     
+#endif

@@ -54,24 +54,4 @@ std::valarray<float> Node::getStrategy(float weight){
 
     return strategy;
 };
-
-std::valarray<float> Node::getStrategy(){
-    float normSum = 0;
-
-    for(int i=0; i < mNumActions; i++){
-        strategy[i] = regretSum[i] > 0 ? regretSum[i]: 0;
-        normSum += strategy[i];
-    }
-
-    for(int i=0; i < mNumActions; i++){
-        if (normSum > 0){
-            strategy[i] /= normSum;
-        }
-        else{
-            strategy[i] = 1.0/mNumActions;  
-        }
-    }
-
-    return strategy;
-};
     
