@@ -70,8 +70,9 @@ std::valarray<float> MCCFRTrainer::mccfr(State state, int player, bool prune){
         std::string infoSet = state.infoSet();
         auto search = mNodeMap[currentPlayer].find(infoSet);
         if(search == mNodeMap[currentPlayer].end()){
-            mNodeMap[currentPlayer].insert({infoSet, InfoNode(mValidActions)});
-            mValidActionsMap[infoSet] = mValidActions;
+            std::vector<std::string> validActions = state.validActions();
+            mNodeMap[currentPlayer].insert({infoSet, InfoNode(validActions)});
+            mValidActionsMap[infoSet] = validActions;
         }
 
         std::vector<std::string> validActions = mValidActionsMap[infoSet];
@@ -120,8 +121,9 @@ std::valarray<float> MCCFRTrainer::mccfr(State state, int player, bool prune){
         std::string infoSet = state.infoSet();
         auto search = mNodeMap[currentPlayer].find(infoSet);
         if(search == mNodeMap[currentPlayer].end()){
-            mNodeMap[currentPlayer].insert({infoSet, InfoNode(mValidActions)});
-            mValidActionsMap[infoSet] = mValidActions;
+            std::vector<std::string> validActions = state.validActions();
+            mNodeMap[currentPlayer].insert({infoSet, InfoNode(validActions)});
+            mValidActionsMap[infoSet] = validActions;
         }
         std::vector<std::string> validActions = mValidActionsMap[infoSet];
         std::unordered_map<std::string, double> strategy = mNodeMap[currentPlayer].at(infoSet).getStrategy(validActions);
@@ -148,8 +150,9 @@ void MCCFRTrainer::updateStrategy(State state, int player){
         std::string infoSet = state.infoSet();
         auto search = mNodeMap[currentPlayer].find(infoSet);
         if(search == mNodeMap[currentPlayer].end()){
-            mNodeMap[currentPlayer].insert({infoSet, InfoNode(mValidActions)});
-            mValidActionsMap[infoSet] = mValidActions;
+            std::vector<std::string> validActions = state.validActions();
+            mNodeMap[currentPlayer].insert({infoSet, InfoNode(validActions)});
+            mValidActionsMap[infoSet] = validActions;
         }
         std::vector<std::string> validActions = mValidActionsMap[infoSet];
         std::unordered_map<std::string, double> strategy = mNodeMap[currentPlayer].at(infoSet).getStrategy(validActions);
@@ -170,7 +173,9 @@ void MCCFRTrainer::updateStrategy(State state, int player){
         std::string infoSet = state.infoSet();
         auto search = mValidActionsMap.find(infoSet);
         if(search == mValidActionsMap.end()){
-            mValidActionsMap[infoSet] = mValidActions;
+            std::vector<std::string> validActions = state.validActions();
+            mNodeMap[currentPlayer].insert({infoSet, InfoNode(validActions)});
+            mValidActionsMap[infoSet] = validActions;
         }
         std::vector<std::string> validActions = mValidActionsMap[infoSet];
         for(auto action: validActions){
