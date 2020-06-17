@@ -1,4 +1,4 @@
-OBJECTS = Node.o State.o Trainer.o MCCFRTrainer.o InfoNode.o main.o
+OBJECTS = Node.o State.o MCCFRTrainer.o InfoNode.o main.o
 
 CC = clang++
 

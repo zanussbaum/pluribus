@@ -5,9 +5,8 @@ MCCFRTrainer::MCCFRTrainer(){
     mCards = {1,2,3};
 };
 
-MCCFRTrainer::MCCFRTrainer(int numPlayers, std::vector<std::string> validActions){
-    mValidActions = validActions;
-    mCards = {1,2,3};
+MCCFRTrainer::MCCFRTrainer(int numPlayers){
+    mCards = {1,2,3,1,2,3};
     mNumPlayers = numPlayers;
 
     std::random_device mRd;
@@ -21,8 +20,11 @@ void MCCFRTrainer::train(int iterations){
     std::random_device rd;
     std::mt19937 randEng(rd());
     for(int i=1; i<=iterations; i++){
+        if(i%1000 == 0){
+            std::cout << "\nIteration "<< i;
+        }
         std::shuffle(mCards.begin(), mCards.end(), randEng);
-        State state(mNumPlayers, 1, mCards);
+        State state(mNumPlayers, 2, mCards, 2);
         for(int player=0; player<mNumPlayers;player++){
             if(i % mStrategyInterval == 0){
                 MCCFRTrainer::updateStrategy(state, player);
@@ -183,7 +185,7 @@ std::valarray<float> MCCFRTrainer::expectedUtility(){
     std::sort(mCards.begin(), mCards.end());
     int numPermutations = 0;
     do{
-        State state(mNumPlayers, 1, mCards);
+        State state(mNumPlayers, 2, mCards, 2);
         expectedUtility += traverseTree(state);
         numPermutations += 1;
     }while(std::next_permutation(mCards.begin(), mCards.end()));

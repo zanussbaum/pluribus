@@ -9,7 +9,7 @@
 class MCCFRTrainer{
     public:
         MCCFRTrainer();
-        MCCFRTrainer(int numPlayers, std::vector<std::string> validActions);
+        MCCFRTrainer(int numPlayers);
         ~MCCFRTrainer();
         void train(int iterations);
         std::vector<int> mCards;
