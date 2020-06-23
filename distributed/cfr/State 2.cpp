@@ -174,13 +174,13 @@ std::vector<int> State::winners(){
     return winners;
 }
 
-std::set<std::string> State::validActions(){
-    std::set<std::string> actions;
-    actions.insert("C");
-    actions.insert("F");
+std::vector<std::string> State::validActions(){
+    std::vector<std::string> actions;
+    actions.push_back("C");
+    actions.push_back("F");
     if(mRaisesSoFar < mRaises){
         int raiseSize = mRound == 0 ? 2 : 4;
-        actions.insert(std::to_string(raiseSize) + "R");
+        actions.push_back(std::to_string(raiseSize) + "R");
     }
     return actions;
 }

@@ -8,4 +8,3 @@
 *.trace
 main
 flask_session
-filename

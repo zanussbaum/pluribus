@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <numeric>
 #include <valarray>
-#include <set>
 class State{
     public:
         State(int numPlayers, int numRound, std::vector<int> cards, int numRaises);
@@ -15,7 +14,7 @@ class State{
         std::valarray<float> payoff();
         std::vector<int> winners();
         bool allCalledOrFolded();
-        std::set<std::string> validActions();
+        std::vector<std::string> validActions();
         
         std::vector<int> mCards;
         std::vector<int> mBets;

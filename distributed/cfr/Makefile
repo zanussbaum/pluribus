@@ -1,13 +1,11 @@
-OBJECTS = Node.o State.o MCCFRTrainer.o InfoNode.o main.o
+OBJECTS = State.o InfoNode.o Pluribus.o main.o 
 
 CC = clang++
 
-CXXFLAGS = -g -std=c++17
-
-
+CXXFLAGS = -g -std=c++17 
 
 main: $(OBJECTS)
-	$(CC) $(CXXFLAGS) -o main $(OBJECTS) -I.
+	$(CC) $(CXXFLAGS) -lboost_iostreams -lboost_serialization -o main $(OBJECTS) -I.
 
 
 %.o: %.cpp

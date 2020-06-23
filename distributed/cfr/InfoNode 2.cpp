@@ -1,9 +1,6 @@
 #include "InfoNode.hpp"
 
-InfoNode::InfoNode(){
-};
-
-InfoNode::InfoNode(std::set<std::string> validActions){
+InfoNode::InfoNode(std::vector<std::string> validActions){
     for(auto action: validActions){
         regretSum[action] = 0;
         strategySum[action] = 0;
@@ -37,7 +34,7 @@ std::unordered_map<std::string, double> InfoNode::getAverageStrategy(){
     return avgStrategy;
 };
 
-std::unordered_map<std::string, double> InfoNode::getStrategy(std::set<std::string> validActions){
+std::unordered_map<std::string, double> InfoNode::getStrategy(std::vector<std::string> validActions){
     float normSum = 0;
 
     for(auto action: validActions){
