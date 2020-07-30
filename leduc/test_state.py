@@ -2,12 +2,12 @@ from leduc.state import State
 
 
 def test_turn():
-    state = State(2, 1)
+    state = State([1, 2, 3], 2, 1, None)
 
     state.take('C')
     assert state.turn == 1
 
-    state = State(3, 2)
+    state = State([1, 2, 3], 2, 1, None)
 
     state.take('F')
     state.take('C')
@@ -17,7 +17,7 @@ def test_turn():
 
 
 def test_terminal():
-    state = State(2, 1)
+    state = State([1, 2, 3], 2, 1, None)
 
     assert state.terminal is False, state
 
@@ -25,7 +25,7 @@ def test_terminal():
 
     assert state.terminal is True, state
 
-    state = State(3, 1)
+    state = State([1, 2, 3], 3, 1, None)
 
     assert state.terminal is False, state
 
@@ -39,7 +39,7 @@ def test_terminal():
 
 
 def test_terminal_multiround():
-    state = State(2, 2)
+    state = State([1, 2, 3], 2, 1, None)
 
     assert state.terminal is False, state
 
@@ -47,7 +47,7 @@ def test_terminal_multiround():
 
     assert state.terminal is True, state
 
-    state = State(2, 2)
+    state = State([1, 2, 3], 2, 2, None)
 
     state.take('C')
     assert state.terminal is False, state
@@ -61,7 +61,7 @@ def test_terminal_multiround():
     state.take('C')
     assert state.terminal is True, state
 
-    state = State(2, 2)
+    state = State([1, 2, 3], 2, 2, None)
 
     state.take('C')
     assert state.terminal is False, state
@@ -75,7 +75,7 @@ def test_terminal_multiround():
     state.take('1R')
     assert state.terminal is False, state
 
-    state = State(2, 2)
+    state = State([1, 2, 3], 2, 2, None)
 
     state.take('C')
     assert state.terminal is False, state
@@ -91,3 +91,24 @@ def test_terminal_multiround():
 
     state.take('1R')
     assert state.terminal is True, state
+
+
+def test_valid_actions():
+    state = State([1, 2, 3], 2, 1, None)
+
+    actions = state.valid_actions()
+    assert actions == ['F', 'C', 'R'], actions
+
+    state.take('C')
+    actions = state.valid_actions()
+    assert actions == ['F', 'C', 'R'], actions
+
+    state = State([1, 2, 3], 2, 1, None)
+
+    state.take('1R')
+    actions = state.valid_actions()
+    assert actions == ['F', 'C', 'R'], actions
+
+    state.take('1R')
+    actions = state.valid_actions()
+    assert actions == ['F', 'C'], actions
