@@ -7,5 +7,4 @@
 *.o
 *.trace
 main
-flask_session
-filename
+*swp*
