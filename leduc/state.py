@@ -3,7 +3,7 @@ from copy import copy, deepcopy
 
 class Player:
     def __init__(self):
-        self.bets = 0
+        self.bets = 1
         self.folded = False
         self.raised = False
 
@@ -15,6 +15,12 @@ class Player:
 
     def __gt__(self, other):
         return self.bets > other.bets
+
+    def __add__(self, other):
+        return self.bets + other.bets
+
+    def __radd__(self, other):
+        return self.bets + other
 
 class State:
     def __init__(self, cards, num_players, num_rounds, hand_eval):
@@ -54,6 +60,12 @@ class State:
             bet_amount = int(action[:-1])
             new_state.players[new_state.turn].bets += bet_amount
             new_state.players[new_state.turn].raised = True
+
+        else:
+            curr_player = new_state.players[new_state.turn]
+            any_raised = any([p > curr_player for p in self.players])
+            call_size = max(self.players).bets - curr_player.bets
+            new_state.players[new_state.turn].bets += call_size
 
         new_state.terminal = new_state.is_terminal()
 
@@ -101,16 +113,16 @@ class State:
             winners = []
             high_score = -1
             for i, score in enumerate(hand_scores):
-                if self.players_in[i]:
+                if self.players[i].folded == False:
                     if len(winners) == 0 or score > high_score:
                         winners = [i]
                         high_score = score
                     elif score == high_score:
                         winners.append(i)
 
-        pot = sum(self.bets)
+        pot = sum(self.players)
         payoff = pot / len(winners)
-        payoffs = [-bet for bet in self.bets]
+        payoffs = [-p.bets for p in self.players]
 
         self.winners = winners
         for w in winners:

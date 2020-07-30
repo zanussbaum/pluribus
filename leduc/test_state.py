@@ -1,4 +1,6 @@
 from leduc.state import State
+from leduc.card import Card
+from leduc.hand_eval import kuhn_eval
 
 
 def test_turn():
@@ -112,3 +114,25 @@ def test_valid_actions():
     state.take('1R')
     actions = state.valid_actions()
     assert actions == ['F', 'C'], actions
+
+
+def test_kuhn_utility():
+    cards = [Card(14, 1), Card(13, 1), Card(12, 1)]
+    state = State(cards, 2, 1, kuhn_eval)
+
+    state.take('C')
+    state.take('C')
+
+    utility = state.utility()
+
+    assert utility == [1, -1], utility
+
+    cards = [Card(14, 1), Card(13, 1), Card(12, 1)]
+    state = State(cards, 2, 1, kuhn_eval)
+
+    state.take('1R')
+    state.take('C')
+
+    utility = state.utility()
+
+    assert utility == [2, -2], utility
