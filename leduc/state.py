@@ -1,3 +1,5 @@
+import numpy as np
+
 from copy import copy, deepcopy
 
 
@@ -42,8 +44,18 @@ class State:
         new_state = State(self.cards, self.num_players, self.num_rounds, self.eval)
         new_state.players = deepcopy(self.players)
         new_state.history = deepcopy(self.history)
+        new_state.turn = self.turn
+        new_state.num_raises = self.num_raises
+        new_state.terminal = self.terminal
+        new_state.round = self.round
 
         return new_state
+
+    def info_set(self):
+        hole_card = self.cards[self.turn]
+
+        info_set = f"{hole_card} || {self.history}"
+        return info_set
 
     def take(self, action, deep=False):
         if deep is True:
@@ -104,7 +116,7 @@ class State:
 
     def utility(self):
         if sum([p.folded for p in self.players]) == 1:
-            winners = [i for i, _ in enumerate(self.players) if self.players.folded == False]
+            winners = [i for i, _ in enumerate(self.players) if self.players[i].folded == False]
 
         else:
             board_cards = self.cards[self.num_players:self.num_players+self.round-1]
@@ -128,7 +140,7 @@ class State:
         for w in winners:
             payoffs[w] += payoff
 
-        return payoffs
+        return np.array(payoffs)
 
     def valid_actions(self):
         any_raises = any([p.raised for p in self.players])
@@ -137,6 +149,6 @@ class State:
             if already_raised:
                 return ['F', 'C']
             else:
-                return ['F', 'C', 'R']
+                return ['F', 'C', '1R']
 
-        return ['F', 'C', 'R']
+        return ['F', 'C', '1R']

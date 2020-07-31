@@ -1,3 +1,4 @@
+import numpy as np
 from leduc.state import State
 from leduc.card import Card
 from leduc.hand_eval import kuhn_eval
@@ -95,21 +96,34 @@ def test_terminal_multiround():
     assert state.terminal is True, state
 
 
+def test_terminal_after_raise():
+    state = State([1, 2, 3], 2, 1, None)
+
+    state = state.take('C', deep=True)
+    state = state.take('1R', deep=True)
+
+    assert state.terminal is False, state
+
+    state = state.take('C', deep=True)
+
+    assert state.terminal is True, state
+
+
 def test_valid_actions():
     state = State([1, 2, 3], 2, 1, None)
 
     actions = state.valid_actions()
-    assert actions == ['F', 'C', 'R'], actions
+    assert actions == ['F', 'C', '1R'], actions
 
     state.take('C')
     actions = state.valid_actions()
-    assert actions == ['F', 'C', 'R'], actions
+    assert actions == ['F', 'C', '1R'], actions
 
     state = State([1, 2, 3], 2, 1, None)
 
     state.take('1R')
     actions = state.valid_actions()
-    assert actions == ['F', 'C', 'R'], actions
+    assert actions == ['F', 'C', '1R'], actions
 
     state.take('1R')
     actions = state.valid_actions()
@@ -125,7 +139,7 @@ def test_kuhn_utility():
 
     utility = state.utility()
 
-    assert utility == [1, -1], utility
+    assert np.array_equal(utility, np.array([1, -1])), utility
 
     cards = [Card(14, 1), Card(13, 1), Card(12, 1)]
     state = State(cards, 2, 1, kuhn_eval)
@@ -135,4 +149,4 @@ def test_kuhn_utility():
 
     utility = state.utility()
 
-    assert utility == [2, -2], utility
+    assert np.array_equal(utility, np.array([2, -2])), utility
