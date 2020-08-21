@@ -146,9 +146,6 @@ class State:
         any_raises = any([p.raised for p in self.players])
         already_raised = self.players[self.turn].raised
         if any_raises:
-            if already_raised:
-                return ['F', 'C']
-            else:
-                return ['F', 'C', '1R']
+            return ['F', 'C']
 
         return ['F', 'C', '1R']

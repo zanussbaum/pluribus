@@ -123,10 +123,6 @@ def test_valid_actions():
 
     state.take('1R')
     actions = state.valid_actions()
-    assert actions == ['F', 'C', '1R'], actions
-
-    state.take('1R')
-    actions = state.valid_actions()
     assert actions == ['F', 'C'], actions
 
 
