@@ -1,16 +1,18 @@
 import sys
 import numpy as np
 
+from itertools import permutations
 from tqdm import tqdm
-from hand_eval import kuhn_eval
-from state import State
-from node import Node
-from card import Card
+from leduc.hand_eval import kuhn_eval
+from leduc.state import State
+from leduc.node import Node
+from leduc.card import Card
+
 
 def learn(iterations, node_map, action_map):
     num_players = len(node_map)
     cards = [Card(14, 1), Card(13, 1), Card(12, 1)]
-    for i in tqdm(range(iterations), desc="Learning"):
+    for i in tqdm(range(iterations), desc="learning"):
         np.random.shuffle(cards)
         for player in range(num_players):
             state = State(cards, num_players, 1, kuhn_eval)
@@ -61,15 +63,48 @@ def accumulate_regrets(state, node_map, action_map, probs):
     return node_util
 
 
+def expected_utility(cards, num_cards, num_players, eval, node_map, action_map):
+    cards = sorted(cards)
+    all_combos = [list(t) for t in set(permutations(cards, num_cards))]
+
+    expected_utility = np.zeros(num_players)
+    for card in tqdm(all_combos, desc='calculating expected utility'):
+        hand = State(card, num_players, 1, eval)
+        expected_utility += traverse_tree(hand, node_map, action_map)
+
+    return expected_utility/len(all_combos)
+
+
+def traverse_tree(hand, node_map, action_map):
+    if hand.is_terminal():
+        utility = hand.utility()
+        return np.array(utility)
+
+    info_set = hand.info_set()
+    node = node_map[hand.turn][info_set]
+
+    strategy = node.avg_strategy()
+    util = np.zeros(len(node_map))
+    valid_actions = action_map[hand.turn][info_set]
+    for action in valid_actions:
+        new_hand = hand.take(action, deep=True)
+        util += traverse_tree(new_hand, node_map, action_map) * strategy[action]
+
+    return util
+
+
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         try:
             num_players = int(sys.argv[1])
         except ValueError:
-            raise ValueError("Must pass an int for number of players")
+            raise ValueError("must pass an int for number of players")
     else:
         num_players = 2
 
     node_map = {i: {} for i in range(num_players)}
     action_map = {i: {} for i in range(num_players)}
-    learn(10000, node_map, action_map) 
+    learn(10000, node_map, action_map)
+
+    cards = [Card(14, 1), Card(13, 1), Card(12, 1)]
+    util = expected_utility(cards, 2, 2, kuhn_eval, node_map, action_map)
