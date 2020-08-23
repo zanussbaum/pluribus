@@ -1,7 +1,10 @@
 # Pluribus - A Multiplayer agent to play Poker variants
 ### This repo will hold an implementation of a pure Python implementation of Pluribus, Facebook's No-Limit 6-player Hold 'Em Poker Bot.
 
+
 This will follow suit from some other reimplementations ([i.e.](https://github.com/karpathy/micrograd)) and aim to reimplemnt the main features of the Pluribus paper. This includes the equlibrium finding and depth limited solving. Currently, we will not implement the abstraction portion of the paper. We hope to extend this to Flop Hold'em. 
+
+
 [Kuhn Poker](https://en.wikipedia.org/wiki/Kuhn_poker) 
 ===
 Kuhn poker is a simplified game of poker where each player is given one card from a set of 3 cards. The third card is set aside. High card wins. We implement a variation of Kuhn poker where the three cards are chose from a set of 5 cards for three players. 
