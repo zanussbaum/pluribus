@@ -58,6 +58,9 @@ class State:
         return info_set
 
     def take(self, action, deep=False):
+        if self.terminal == True:
+            raise ValueError("Already at a terminal state")
+
         if deep is True:
             new_state = copy(self)
         else:
@@ -65,19 +68,21 @@ class State:
 
         new_state.history[self.round].append(action)
 
+        curr_player = new_state.players[new_state.turn]
         if action == 'F':
-            new_state.players[new_state.turn].folded = True
+            curr_player.folded = True
+            curr_player.raised = False
 
         elif 'R' in action:
             bet_amount = int(action[:-1])
-            new_state.players[new_state.turn].bets += bet_amount
-            new_state.players[new_state.turn].raised = True
+            call_size = max(self.players).bets - curr_player.bets
+            curr_player.bets += bet_amount + call_size
+            curr_player.raised = True
 
         else:
-            curr_player = new_state.players[new_state.turn]
             any_raised = any([p > curr_player for p in self.players])
             call_size = max(self.players).bets - curr_player.bets
-            new_state.players[new_state.turn].bets += call_size
+            curr_player.bets += call_size
 
         new_state.terminal = new_state.is_terminal()
 
@@ -111,6 +116,8 @@ class State:
                 return True
             else:
                 self.round += 1
+                for p in self.players:
+                    p.raised = False
 
         return False
 
@@ -149,3 +156,35 @@ class State:
             return ['F', 'C']
 
         return ['F', 'C', '1R']
+
+
+class Leduc(State):
+    def __init__(self, cards, num_players, hand_eval):
+        super().__init__(cards, num_players, hand_eval)
+        self.num_rounds = 2
+        self.players = [Player() for _ in range(num_players)]
+        self.history = [[] for _ in range(self.num_rounds)]
+
+
+    def __copy__(self):
+        new_state = Leduc(self.cards, self.num_players, self.eval)
+        new_state.players = deepcopy(self.players)
+        new_state.history = deepcopy(self.history)
+        new_state.turn = self.turn
+        new_state.num_raises = self.num_raises
+        new_state.terminal = self.terminal
+        new_state.round = self.round
+
+        return new_state
+
+
+    def valid_actions(self):
+        num_raises_so_far = sum([p.raised for p in self.players])
+
+        if num_raises_so_far == self.num_players:
+            return ['F', 'C']
+        else:
+            if self.round == 0:
+                return ['F', 'C', '2R']
+            else:
+                return ['F', 'C', '4R']
