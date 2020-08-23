@@ -23,4 +23,5 @@ def test_expected_utility():
     assert util.sum() == 0
     assert np.isclose(np.abs(util[0]), np.abs(util[1])), f"Util was {util}"
     assert np.abs(util).sum() > 0, f"Util was {util}"
+    assert abs(util[1] - 1/18) <= .01, f"Util not converging {util}"
 
