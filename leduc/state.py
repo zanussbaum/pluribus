@@ -25,13 +25,13 @@ class Player:
         return self.bets + other
 
 class State:
-    def __init__(self, cards, num_players, num_rounds, hand_eval):
+    def __init__(self, cards, num_players, hand_eval):
         self.num_players = num_players
-        self.num_rounds = num_rounds
+        self.num_rounds = 1
         self.eval = hand_eval
         self.cards = cards
         self.players = [Player() for _ in range(num_players)]
-        self.history = [[] for _ in range(num_rounds)]
+        self.history = [[] for _ in range(self.num_rounds)]
         self.round = 0
         self.turn = 0
         self.terminal = False
@@ -41,7 +41,7 @@ class State:
         return f"{self.history}\nTurn: {self.turn}\nPlayers: {self.players}"
 
     def __copy__(self):
-        new_state = State(self.cards, self.num_players, self.num_rounds, self.eval)
+        new_state = State(self.cards, self.num_players, self.eval)
         new_state.players = deepcopy(self.players)
         new_state.history = deepcopy(self.history)
         new_state.turn = self.turn

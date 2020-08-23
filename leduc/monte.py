@@ -22,7 +22,7 @@ def learn(iterations, node_map, action_map):
     for i in tqdm(range(1, iterations + 1), desc="learning"):
         np.random.shuffle(cards)
         for player in range(num_players):
-            state = State(cards, num_players, 1, kuhn_eval)
+            state = State(cards, num_players, kuhn_eval)
             if i % STRAT_INTERVAL == 0:
                 update_strategy(player, state, node_map, action_map)
 
@@ -137,7 +137,7 @@ def expected_utility(cards, num_cards, num_players,
 
     expected_utility = np.zeros(num_players)
     for card in tqdm(all_combos, desc='calculating expected utility'):
-        hand = State(card, num_players, 1, eval)
+        hand = State(card, num_players, eval)
         expected_utility += traverse_tree(hand, node_map, action_map)
 
     return expected_utility/len(all_combos)

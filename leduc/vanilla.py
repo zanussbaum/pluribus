@@ -16,7 +16,7 @@ def learn(iterations, node_map, action_map):
     for i in tqdm(range(iterations), desc="learning"):
         np.random.shuffle(cards)
         for player in range(num_players):
-            state = State(cards, num_players, 1, kuhn_eval)
+            state = State(cards, num_players, kuhn_eval)
             probs = np.ones(num_players)
             accumulate_regrets(state, node_map, action_map, probs)
 
@@ -70,7 +70,7 @@ def expected_utility(cards, num_cards, num_players, eval, node_map, action_map):
 
     expected_utility = np.zeros(num_players)
     for card in tqdm(all_combos, desc='calculating expected utility'):
-        hand = State(card, num_players, 1, eval)
+        hand = State(card, num_players, eval)
         expected_utility += traverse_tree(hand, node_map, action_map)
 
     return expected_utility/len(all_combos)

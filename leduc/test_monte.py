@@ -24,7 +24,7 @@ def test_update_strategy():
     node_map[0]['As || [[]]'] = n1
     node_map[0]["As || [['C', '1R']]"] = n2
     cards = [Card(14, 1), Card(13, 1), Card(12, 1)]
-    state = State(cards, num_players, 1, kuhn_eval)
+    state = State(cards, num_players, kuhn_eval)
 
     update_strategy(0, state, node_map, action_map)
 
