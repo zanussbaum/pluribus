@@ -32,10 +32,3 @@ Implementation of Pluribus
     * Search from all opponent actions to find best response
     - [ ] Real-time search Leduc Poker
     - [ ] Real-time search Hold'em
-
-- [ ] Action and Card Abstraction
-    * Card abstraction based on hand strength
-    * Action abstraction based on bet size
-        * Pluribus does pot size for bet size (I believe .25, .5, 1 and 1.25?)
- 
-
