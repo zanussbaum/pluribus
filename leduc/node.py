@@ -35,8 +35,28 @@ class Node:
                                 for key in self.strategy_sum.keys())
 
         self.curr_strategy = avg_strategy
- 
+
         return avg_strategy
 
     def __repr__(self):
         return f'strategy_sum: {self.strategy_sum}\n regret: {self.regret_sum}\n'
+
+
+class MNode(Node):
+    def __init__(self, actions):
+        super().__init__(actions)
+
+    def strategy(self):
+        actions = self.actions
+        strat = {action: max(value, 0) for action, value in
+                 self.regret_sum.items()}
+
+        norm_sum = sum([strat[key] for key in strat])
+
+        if norm_sum > 0:
+            strat = {key: strat[key]/norm_sum for key in actions}
+        else:
+            num_valid = len(actions)
+            strat = {key: 1/num_valid for key, value in strat.items()}
+
+        return strat
