@@ -36,7 +36,7 @@ def test_expected_utility():
     num_players = 2
     node_map = {i: {} for i in range(num_players)}
     action_map = {i: {} for i in range(num_players)}
-    learn(10000, node_map, action_map)
+    learn(20000, node_map, action_map)
 
     cards = [Card(14, 1), Card(13, 1), Card(12, 1)]
     util = expected_utility(cards, 3, 2, kuhn_eval, node_map, action_map)
@@ -50,3 +50,19 @@ def test_expected_utility():
     assert np.abs(util).sum() > 0, f"Util was {util}"
     assert abs(util[1] - 1/18) <= .01, f"Util not converging {util}"
 
+
+def test_expected_utility_three_player():
+    num_players = 3
+    node_map = {i: {} for i in range(num_players)}
+    action_map = {i: {} for i in range(num_players)}
+    learn(20000, node_map, action_map)
+
+    cards = [Card(14, 1), Card(13, 1), Card(12, 1), Card(11, 1)]
+    util = expected_utility(cards, 4, 3, kuhn_eval, node_map, action_map)
+
+    print(util)
+    print(json.dumps(action_map, indent=4))
+    print(node_map)
+
+    assert abs(util.sum()) <= 0.0001, f"Something weird, not a zero sum game"
+    assert np.abs(util).sum() > 0, f"Util was {util}"
