@@ -11,7 +11,7 @@ from leduc.card import Card
 
 def learn(iterations, node_map, action_map):
     num_players = len(node_map)
-    cards = [Card(14, 1), Card(13, 1), Card(12, 1)]
+    cards = [Card(14 - i, 1) for i in range(num_players + 1)]
     for i in tqdm(range(iterations), desc="learning"):
         np.random.shuffle(cards)
         for player in range(num_players):

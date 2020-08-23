@@ -115,7 +115,7 @@ class State:
         return False
 
     def utility(self):
-        if sum([p.folded for p in self.players]) == 1:
+        if len(self.players) - sum([p.folded for p in self.players]) == 1:
             winners = [i for i, _ in enumerate(self.players) if self.players[i].folded == False]
 
         else:
