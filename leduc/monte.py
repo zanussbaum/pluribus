@@ -1,4 +1,5 @@
 import sys
+import json
 import numpy as np
 
 from itertools import permutations
@@ -175,3 +176,6 @@ if __name__ == '__main__':
 
     cards = [Card(14, 1), Card(13, 1), Card(12, 1)]
     util = expected_utility(cards, 2, 2, kuhn_eval, node_map, action_map)
+    print(util)
+    print(node_map)
+    print(json.dumps(action_map, indent=4))
