@@ -5,18 +5,21 @@ import numpy as np
 from itertools import permutations
 from tqdm import tqdm
 from leduc.hand_eval import kuhn_eval
-from leduc.state import State
 from leduc.node import Node
 from leduc.card import Card
 
 
-def learn(iterations, node_map, action_map):
+def learn(iterations, cards, num_cards, node_map, action_map):
+    if len(cards) > 4:
+        from leduc.state import Leduc as State
+    else:
+        from leduc.state import State
+    all_combos = [list(t) for t in set(permutations(cards, num_cards))]
     num_players = len(node_map)
-    cards = [Card(14 - i, 1) for i in range(num_players + 1)]
     for i in tqdm(range(iterations), desc="learning"):
-        np.random.shuffle(cards)
+        card = np.random.choice(len(all_combos))
         for player in range(num_players):
-            state = State(cards, num_players, kuhn_eval)
+            state = State(all_combos[card], num_players, kuhn_eval)
             probs = np.ones(num_players)
             accumulate_regrets(state, node_map, action_map, probs)
 
@@ -64,7 +67,12 @@ def accumulate_regrets(state, node_map, action_map, probs):
     return node_util
 
 
-def expected_utility(cards, num_cards, num_players, eval, node_map, action_map):
+def expected_utility(cards, num_cards, num_players,
+                     eval, node_map, action_map):
+    if len(cards) > 4:
+        from leduc.state import Leduc as State
+    else:
+        from leduc.state import State
     cards = sorted(cards)
     all_combos = [list(t) for t in set(permutations(cards, num_cards))]
 
@@ -77,7 +85,7 @@ def expected_utility(cards, num_cards, num_players, eval, node_map, action_map):
 
 
 def traverse_tree(hand, node_map, action_map):
-    if hand.is_terminal():
+    if hand.terminal:
         utility = hand.utility()
         return np.array(utility)
 
@@ -105,9 +113,9 @@ if __name__ == '__main__':
 
     node_map = {i: {} for i in range(num_players)}
     action_map = {i: {} for i in range(num_players)}
-    learn(10000, node_map, action_map)
+    cards = [Card(14 - i, 1) for i in range(num_players + 1)]
+    learn(10000, cards, num_players, node_map, action_map)
 
-    cards = [Card(14, 1), Card(13, 1), Card(12, 1)]
     util = expected_utility(cards, 2, 2, kuhn_eval, node_map, action_map)
     print(util)
     print(node_map)

@@ -23,7 +23,7 @@ def test_update_strategy():
 
     node_map[0]['As || [[]]'] = n1
     node_map[0]["As || [['C', '1R']]"] = n2
-    cards = [Card(14, 1), Card(13, 1), Card(12, 1)]
+    cards = [Card(14, 1), Card(13, 1)]
     state = State(cards, num_players, kuhn_eval)
 
     update_strategy(0, state, node_map, action_map)
@@ -36,10 +36,10 @@ def test_expected_utility():
     num_players = 2
     node_map = {i: {} for i in range(num_players)}
     action_map = {i: {} for i in range(num_players)}
-    learn(20000, node_map, action_map)
-
     cards = [Card(14, 1), Card(13, 1), Card(12, 1)]
-    util = expected_utility(cards, 3, 2, kuhn_eval, node_map, action_map)
+    learn(20000, cards, 2, node_map, action_map)
+
+    util = expected_utility(cards, 2, 2, kuhn_eval, node_map, action_map)
 
     print(util)
     print(json.dumps(action_map, indent=4))
@@ -55,10 +55,10 @@ def test_expected_utility_three_player():
     num_players = 3
     node_map = {i: {} for i in range(num_players)}
     action_map = {i: {} for i in range(num_players)}
-    learn(20000, node_map, action_map)
-
     cards = [Card(14, 1), Card(13, 1), Card(12, 1), Card(11, 1)]
-    util = expected_utility(cards, 4, 3, kuhn_eval, node_map, action_map)
+    learn(20000, cards, 3, node_map, action_map)
+
+    util = expected_utility(cards, 3, 3, kuhn_eval, node_map, action_map)
 
     print(util)
     print(json.dumps(action_map, indent=4))
