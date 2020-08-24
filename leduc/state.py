@@ -53,8 +53,12 @@ class State:
 
     def info_set(self):
         hole_card = self.cards[self.turn]
+        if len(self.cards) > len(self.players):
+            board_card = self.cards[len(self.players)]
+        else:
+            board_card = None
 
-        info_set = f"{hole_card} || {self.history}"
+        info_set = f"{hole_card} |{board_card if board_card is not None else ''}| {self.history}"
         return info_set
 
     def take(self, action, deep=False):
