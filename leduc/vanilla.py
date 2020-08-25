@@ -5,6 +5,7 @@ import numpy as np
 from itertools import permutations
 from tqdm import tqdm
 from leduc.hand_eval import kuhn_eval
+from leduc.best_response import exploitability
 from leduc.node import Node
 from leduc.card import Card
 
@@ -68,11 +69,13 @@ def accumulate_regrets(state, node_map, action_map, probs):
 
 
 def expected_utility(cards, num_cards, num_players,
-                     eval, node_map, action_map):
+                     node_map, action_map):
     if len(cards) > 4:
         from leduc.state import Leduc as State
+        from leduc.hand_eval import leduc_eval as eval
     else:
         from leduc.state import State
+        from leduc.hand_eval import kuhn_eval as eval
     cards = sorted(cards)
     all_combos = [list(t) for t in set(permutations(cards, num_cards))]
 
@@ -87,7 +90,7 @@ def expected_utility(cards, num_cards, num_players,
 def traverse_tree(hand, node_map, action_map):
     if hand.terminal:
         utility = hand.utility()
-        return np.array(utility)
+        return utility
 
     info_set = hand.info_set()
     node = node_map[hand.turn][info_set]
@@ -115,8 +118,10 @@ if __name__ == '__main__':
     action_map = {i: {} for i in range(num_players)}
     cards = [Card(14 - i, 1) for i in range(num_players + 1)]
     learn(10000, cards, num_players, node_map, action_map)
+    exploit = exploitability(cards, 2, node_map, action_map)
+    print(exploit)
 
-    util = expected_utility(cards, 2, 2, kuhn_eval, node_map, action_map)
+    util = expected_utility(cards, 2, 2, node_map, action_map)
     print(util)
     print(node_map)
     print(json.dumps(action_map, indent=4))
