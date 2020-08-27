@@ -3,53 +3,6 @@ import numpy as np
 from itertools import permutations
 
 
-def best_response(state, fixed, node_map, action_map, br_map, prob):
-    if state.terminal:
-        util = state.utility()
-        return util * prob
-
-    current_player = state.turn
-    info_set = state.info_set()
-    valid_actions = action_map[current_player][info_set]
-    if current_player == fixed:
-        br = {action: best_response(state.take(action, deep=True), fixed,
-              node_map, action_map, br_map, prob) for action in valid_actions}
-        br_map[current_player][info_set] = {action: 0
-                                            for action in valid_actions}
-        best_action, best_value = max(br.items(),
-                                      key=lambda x: x[1][current_player])
-        br_map[current_player][info_set][best_action] = 1
-        return best_value
-
-    else:
-        strat = node_map[current_player][info_set].avg_strategy()
-        ev = [best_response(state.take(action, deep=True), fixed, node_map,
-              action_map, br_map, prob * strat[action])
-              for action in valid_actions]
-        return np.array(ev).sum(axis=0)
-
-
-def traverse(state, action_map, node_map, br_map, player):
-    if state.terminal:
-        util = state.utility()
-        return util
-
-    info_set = state.info_set()
-    if state.turn == player:
-        strategy = br_map[state.turn][info_set]
-    else:
-        strategy = node_map[state.turn][info_set]
-
-    util = np.zeros(len(node_map))
-    valid_actions = action_map[state.turn][info_set]
-    for action in valid_actions:
-        new_hand = state.take(action, deep=True)
-        util += traverse(new_hand, action_map, node_map,
-                         br_map, player) * strategy[action]
-
-    return util
-
-
 def exploitability(cards, num_cards, node_map, action_map):
     if len(cards) > 4:
         from leduc.state import Leduc as State
@@ -58,22 +11,99 @@ def exploitability(cards, num_cards, node_map, action_map):
         from leduc.state import State
         from leduc.hand_eval import kuhn_eval as eval
 
-    all_combos = [list(t) for t in set(permutations(cards, num_cards))]
+    public_states, start = build_tree(cards, len(node_map))
+    exploit = 0 
+    for player in range(len(node_map)):
+        v = expectimax(start, public_states, cards, player, node_map, 1)
+        exploit += v
 
-    num_players = len(node_map)
-    br_map = {i: {} for i in range(num_players)}
-    for combo in all_combos:
-        state = State(combo, num_players, eval)
-        for player in range(num_players):
-            best_response(state, player, node_map, action_map, br_map, 1.)
-    converged_strat = {p: {k: v.avg_strategy() for k,
-                       v in node_map[p].items()} for p in node_map}
+    return exploit/len(node_map)
 
-    exploitability = np.zeros(num_players)
-    for combo in all_combos:
-        state = State(combo, num_players, eval)
-        for player in range(num_players):
-            exploitability[player] += traverse(state, action_map, converged_strat,
-                                               br_map, player)[player]
-    print(exploitability)
-    return exploitability.sum()/len(all_combos)
+
+def build_tree(cards, num_players):
+    if len(cards) > 4:
+        from leduc.state import Leduc as State
+        from leduc.hand_eval import leduc_eval as eval
+    else:
+        from leduc.state import State
+        from leduc.hand_eval import kuhn_eval as eval
+    
+    state = State(cards, num_players, eval)
+    public_states = {} 
+
+    traverse_public(state, public_states)
+
+    return public_states, state
+
+
+def traverse_public(state, public):
+    if state.terminal:
+        return
+
+    for action in state.valid_actions():
+        new_state = state.take(action, deep=True)
+        if state not in public:
+            public[state] = {}
+        public[state][action] = new_state
+        traverse_public(new_state, public)
+    
+    return
+
+    
+def expectimax(public_state, state_map, cards, fixed, node_map, prob):
+    if public_state.terminal:
+        # normalize prob for everyone else
+        all_deals = [list(t) for t in set(permutations(cards, 2))]
+        util = np.zeros(len(node_map)) 
+        for deal in all_deals:
+            public_state.cards = deal
+            util += public_state.utility() * prob
+        return util[fixed]
+
+    v = float('-inf')
+    valid_actions = public_state.valid_actions()
+    v_util = {a: 0 for a in valid_actions}
+    w = {a: 0 for a in valid_actions}
+    new_prob = prob
+    for action, state in state_map[public_state].items():
+        if public_state.turn != fixed:
+            # compute weight
+            new_prob = compute_weight(public_state, action, node_map, prob)
+            w[action] = new_prob
+        v_util[action] = expectimax(state, state_map, cards, fixed, node_map, new_prob)
+        if public_state.turn == fixed and v_util[action] > v:
+            v = v_util[action]
+            
+    if public_state.turn != fixed:
+       norm = normalize(w) 
+       if v == float('-inf'):
+           v = 0
+    
+       for action in state_map[public_state]:
+           v += norm[action] * v_util[action]
+           
+    return v
+        
+
+def normalize(map):
+    norm_sum = sum(map.values())
+
+    if norm_sum > 0:
+        normed = {key: map[key]/norm_sum for key in map}
+    else:
+        num_valid = len(map)
+        normed = {key: 1/num_valid for key in map}
+        
+    return normed
+
+
+def compute_weight(state, action, node_map, prob):
+    player = state.turn
+    nodes = node_map[player]
+    next_state = state.take(action, deep=True)
+
+    for info_set in nodes:
+        if str(state.history) in info_set:
+            prob *= nodes[info_set].avg_strategy()[action]
+            
+    return prob
