@@ -4,7 +4,7 @@
 
 [Kuhn Poker](https://en.wikipedia.org/wiki/Kuhn_poker) is a simplified version of poker. In the 2 player version, there are 3 cards (Ace, King, Queen). Each player has the option to Fold, Call, or Bet 1. If player 1 bets, then player 2 can either call or fold. High card wins.  3 player is similar in that a third card is added. See the Wikipedia link for a more in-depth description.
 
-The NE expected value for player 1 is $$\frac{1}{18}$$
+The NE expected value for player 1 is -1/18
 
 Three player Kuhn Poker has a family of analytically found Nash Equilibriums, but it's not known if the family covers all Nash Equilibrium.
 
