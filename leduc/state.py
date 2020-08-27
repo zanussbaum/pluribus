@@ -38,7 +38,7 @@ class State:
         self.num_raises = 0
 
     def __repr__(self):
-        return f"{self.history}\nTurn: {self.turn}\nPlayers: {self.players}"
+        return f"{self.history}"
 
     def __copy__(self):
         new_state = State(self.cards, self.num_players, self.eval)
