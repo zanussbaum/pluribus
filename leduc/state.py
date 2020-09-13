@@ -35,17 +35,21 @@ class State:
         self.round = 0
         self.turn = 0
         self.terminal = False
-        self.num_raises = 0
 
     def __repr__(self):
-        return f"{self.history}"
+        return f"{self.history[:self.round+1]}"
+
+    def __eq__(self, other):
+        return self.history == other.history and self.cards == other.cards
+
+    def __hash__(self):
+        return hash(f'{self.history}, {self.cards}')
 
     def __copy__(self):
         new_state = State(self.cards, self.num_players, self.eval)
         new_state.players = deepcopy(self.players)
         new_state.history = deepcopy(self.history)
         new_state.turn = self.turn
-        new_state.num_raises = self.num_raises
         new_state.terminal = self.terminal
         new_state.round = self.round
 
@@ -58,7 +62,7 @@ class State:
         else:
             board_card = None
 
-        info_set = f"{hole_card} |{board_card if board_card is not None else ''}| {self.history}"
+        info_set = f"{hole_card} |{board_card if board_card is not None else ''}| {str(self)}"
         return info_set
 
     def take(self, action, deep=False):
@@ -93,7 +97,7 @@ class State:
         new_state.turn = (new_state.turn + 1) % new_state.num_players
 
         while new_state.players[new_state.turn].folded:
-            new_state.turn += 1
+            new_state.turn = (new_state.turn + 1) % new_state.num_players
 
         return new_state
 
@@ -169,13 +173,11 @@ class Leduc(State):
         self.players = [Player() for _ in range(num_players)]
         self.history = [[] for _ in range(self.num_rounds)]
 
-
     def __copy__(self):
         new_state = Leduc(self.cards, self.num_players, self.eval)
         new_state.players = deepcopy(self.players)
         new_state.history = deepcopy(self.history)
         new_state.turn = self.turn
-        new_state.num_raises = self.num_raises
         new_state.terminal = self.terminal
         new_state.round = self.round
 
