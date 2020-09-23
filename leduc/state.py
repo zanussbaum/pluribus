@@ -88,16 +88,10 @@ class State:
             curr_player.raised = True
 
         else:
-            any_raised = any([p > curr_player for p in self.players])
             call_size = max(self.players).bets - curr_player.bets
             curr_player.bets += call_size
 
         new_state.terminal = new_state.is_terminal()
-
-        new_state.turn = (new_state.turn + 1) % new_state.num_players
-
-        while new_state.players[new_state.turn].folded:
-            new_state.turn = (new_state.turn + 1) % new_state.num_players
 
         return new_state
 
@@ -124,17 +118,26 @@ class State:
                 return True
             else:
                 self.round += 1
+                self.turn = 0
                 for p in self.players:
                     p.raised = False
+
+                return False
+
+        self.turn = (self.turn + 1) % self.num_players
+
+        while self.players[self.turn].folded:
+            self.turn = (self.turn + 1) % self.num_players
 
         return False
 
     def utility(self):
         if len(self.players) - sum([p.folded for p in self.players]) == 1:
+            hand_scores = []
             winners = [i for i, _ in enumerate(self.players) if self.players[i].folded == False]
 
         else:
-            board_cards = self.cards[self.num_players:self.num_players+self.round-1]
+            board_cards = None if len(self.cards) <= self.num_players else [self.cards[self.num_players]]
             players_in = [i for i, p in enumerate(self.players) if p.folded == False]
             hand_scores = [self.eval(self.cards[i], board_cards) for i in players_in]
             winners = []
@@ -151,7 +154,6 @@ class State:
         payoff = pot / len(winners)
         payoffs = [-p.bets for p in self.players]
 
-        self.winners = winners
         for w in winners:
             payoffs[w] += payoff
 
@@ -159,7 +161,6 @@ class State:
 
     def valid_actions(self):
         any_raises = any([p.raised for p in self.players])
-        already_raised = self.players[self.turn].raised
         if any_raises:
             return ['F', 'C']
 

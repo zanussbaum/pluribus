@@ -2,7 +2,6 @@ class Node:
     def __init__(self, actions):
         self.actions = set(actions)
         self.regret_sum = {action: 0 for action in actions}
-        self.curr_strategy = {action: 0 for action in actions}
         self.strategy_sum = {action: 0 for action in actions}
 
     def strategy(self, weight=1):
@@ -33,8 +32,6 @@ class Node:
         else:
             avg_strategy = dict((key, 1/len(self.actions))
                                 for key in self.strategy_sum.keys())
-
-        self.curr_strategy = avg_strategy
 
         return avg_strategy
 

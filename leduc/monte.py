@@ -4,9 +4,11 @@ import numpy as np
 
 from itertools import permutations
 from tqdm import tqdm
-from leduc.hand_eval import kuhn_eval
+from leduc.best_response import exploitability
 from leduc.node import MNode as Node
 from leduc.card import Card
+from leduc.hand_eval import leduc_eval
+from leduc.util import expected_utility
 
 STRAT_INTERVAL = 100
 PRUNE_THRESH = 200
@@ -18,14 +20,17 @@ REGRET_MIN = -300000
 def learn(iterations, cards, num_cards, node_map, action_map):
     if len(cards) > 4:
         from leduc.state import Leduc as State
+        from leduc.hand_eval import leduc_eval as eval
     else:
         from leduc.state import State
+        from leduc.hand_eval import kuhn_eval as eval
+
     all_combos = [list(t) for t in set(permutations(cards, num_cards))]
     num_players = len(node_map)
     for i in tqdm(range(1, iterations + 1), desc="learning"):
         card = np.random.choice(len(all_combos))
         for player in range(num_players):
-            state = State(all_combos[card], num_players, kuhn_eval)
+            state = State(all_combos[card], num_players, eval)
             if i % STRAT_INTERVAL == 0:
                 update_strategy(player, state, node_map, action_map)
 
@@ -40,10 +45,10 @@ def learn(iterations, cards, num_cards, node_map, action_map):
                 accumulate_regrets(player, state, node_map, action_map)
 
         if i < LCFR_INTERVAL and i % DISCOUNT == 0:
-            discounted = (i/DISCOUNT)/(i/(DISCOUNT + 1))
+            discounted = (i/DISCOUNT)/(i/(DISCOUNT) + 1)
             for player in node_map:
                 player_nodes = node_map[player]
-                for node in player_nodes.values():
+                for key, node in player_nodes.items():
                     node.regret_sum = {key: value * discounted for
                                        key, value in node.regret_sum.items()}
                     node.strategy_sum = {key: value * discounted for
@@ -133,55 +138,22 @@ def accumulate_regrets(traverser, state, node_map, action_map, prune=False):
                                   prune=prune)
 
 
-def expected_utility(cards, num_cards, num_players,
-                     eval, node_map, action_map):
-    if len(cards) > 4:
-        from leduc.state import Leduc as State
-    else:
-        from leduc.state import State
-    cards = sorted(cards)
-    all_combos = [list(t) for t in set(permutations(cards, num_cards))]
-
-    expected_utility = np.zeros(num_players)
-    for card in tqdm(all_combos, desc='calculating expected utility'):
-        hand = State(card, num_players, eval)
-        expected_utility += traverse_tree(hand, node_map, action_map)
-
-    return expected_utility/len(all_combos)
-
-
-def traverse_tree(hand, node_map, action_map):
-    if hand.is_terminal():
-        utility = hand.utility()
-        return np.array(utility)
-
-    info_set = hand.info_set()
-    node = node_map[hand.turn][info_set]
-
-    strategy = node.avg_strategy()
-    util = np.zeros(len(node_map))
-    valid_actions = action_map[hand.turn][info_set]
-    for action in valid_actions:
-        new_hand = hand.take(action, deep=True)
-        util += traverse_tree(new_hand, node_map, action_map) * strategy[action]
-
-    return util
-
-
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        try:
-            num_players = int(sys.argv[1])
-        except ValueError:
-            raise ValueError("must pass an int for number of players")
-    else:
-        num_players = 2
-
+    num_players = 2
     node_map = {i: {} for i in range(num_players)}
     action_map = {i: {} for i in range(num_players)}
-    cards = [Card(14 - i, 1) for i in range(num_players + 1)]
-    learn(10000, cards, node_map, action_map)
-    util = expected_utility(cards, 2, 2, kuhn_eval, node_map, action_map)
+    cards = [Card(14, 1), Card(13, 1), Card(12, 1), Card(14, 2), Card(13, 2), Card(12, 2)]
+    learn(50000, cards, 3, node_map, action_map)
+    exploit = exploitability(cards, 3, node_map, action_map)
+    print(exploit)
+
+    for player in node_map:
+        print(f"Player {player}")
+        print('Number of info sets', len(node_map[player]))
+        for info_set, node in node_map[player].items():
+            avg_strat = node.avg_strategy()
+            print(f"{info_set}: {avg_strat}")
+        
+
+    util = expected_utility(cards, 3, 2, node_map, action_map)
     print(util)
-    print(node_map)
-    print(json.dumps(action_map, indent=4))
