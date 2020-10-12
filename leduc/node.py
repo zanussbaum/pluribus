@@ -1,6 +1,6 @@
 class Node:
     def __init__(self, actions):
-        self.actions = set(actions)
+        self.actions = actions
         self.regret_sum = {action: 0 for action in actions}
         self.strategy_sum = {action: 0 for action in actions}
 
@@ -15,7 +15,7 @@ class Node:
             strat = {key: strat[key]/norm_sum for key in actions}
         else:
             num_valid = len(actions)
-            strat = {key: 1/num_valid for key, value in strat.items()}
+            strat = {key: 1/num_valid for key in actions}
 
         self.strategy_sum = {key: value + strat[key] * weight for key, value
                              in self.strategy_sum.items()}
@@ -28,10 +28,10 @@ class Node:
 
         if norm_sum > 0:
             avg_strategy = dict((key, self.strategy_sum[key]/norm_sum) for
-                                key in self.strategy_sum.keys())
+                                key in self.strategy_sum)
         else:
             avg_strategy = dict((key, 1/len(self.actions))
-                                for key in self.strategy_sum.keys())
+                                for key in self.strategy_sum)
 
         return avg_strategy
 
