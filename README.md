@@ -19,16 +19,16 @@ Here is the game tree for one round of the game
 
 Implementation of Pluribus
 ===================================
-- [X] Monte Carlo Counterfactual Regret Minimization
+- Monte Carlo Counterfactual Regret Minimization
     * Samples action in game tree rather than traversing entire game tree
     * One player is traverser on each iteration
     * Linear CFR in early iterations
     - [x] Two player Kuhn MCCFR
     - [x] Three player Kuhn MCCFR
-    - [ ] Three player Leduc MCCFR
+    - [x] Three player Leduc MCCFR
 
-- [ ] Depth Limited Search
+- Depth Limited Search
     * Blueprint strategy calculated to get coarse grained strategy
     * Search from all opponent actions to find best response
-    - [ ] Real-time search Leduc Poker
+    - [x] Real-time search Leduc Poker
     - [ ] Real-time search Hold'em
