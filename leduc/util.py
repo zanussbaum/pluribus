@@ -38,3 +38,17 @@ def traverse_tree(hand, node_map, action_map):
         util += traverse_tree(new_hand, node_map, action_map) * strategy[action]
 
     return util
+
+    
+def bias(strategy, action_to_bias):
+    new_strat = {k:(v if k != action_to_bias else v * 5) for k, v in strategy.items()}
+
+    norm_sum = sum([val for val in new_strat.values()])
+
+    if norm_sum > 0:
+        new_strat = {key: new_strat[key]/norm_sum for key in new_strat}
+    else:
+        num_valid = len(new_strat)
+        new_strat = {key: 1/num_valid for key in new_strat}
+
+    return new_strat
