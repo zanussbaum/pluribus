@@ -33,6 +33,8 @@ def traverse_tree(hand, node_map, action_map):
     strategy = node.avg_strategy()
     util = np.zeros(len(node_map))
     valid_actions = action_map[hand.turn][info_set]
+    if 'actions' in valid_actions:
+        valid_actions = valid_actions['actions']
     for action in valid_actions:
         new_hand = hand.take(action, deep=True)
         util += traverse_tree(new_hand, node_map, action_map) * strategy[action]

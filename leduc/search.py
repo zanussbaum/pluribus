@@ -37,7 +37,7 @@ class Pluribus:
             else:
                 while True:
                     action = input("Choose an Action: F, C, $R, where $ is any integer: ")
-                    if action in ['F', 'C'] or action[0].isnumeric() and action[1] == 'R':
+                    if action in ['F', 'C'] or (action[0].isnumeric() and len(action) > 1 and action[1] == 'R'):
                         break
                     else:
                         print("Please choose a valid action (F, C, $R)")

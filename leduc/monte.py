@@ -294,7 +294,6 @@ class Search:
             new_state = state.take(random_action, deep=True)
             return self.accumulate_regrets_search(traverser, new_state, node_map, action_map, continuations,
                                                   prune=prune, leaf=new_state.round!=state.round)
-
     def rollout(self, player, state, contin_strat):
         node_map = self.blueprint
         action_map = self.action_map
@@ -304,7 +303,7 @@ class Search:
 
         indistinguishable_states = [combo for combo in self.all_combos if combo[player] == state.cards[player]] 
 
-        num_rollouts = 1
+        num_rollouts = 5
         for _ in range(num_rollouts):
             card_choice = np.random.choice(len(indistinguishable_states))
             starting_state.cards = indistinguishable_states[card_choice]

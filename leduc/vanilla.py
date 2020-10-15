@@ -75,8 +75,6 @@ if __name__ == '__main__':
     action_map = {i: {} for i in range(num_players)}
     cards = [Card(14, 1), Card(13, 1), Card(12, 1), Card(14, 2), Card(13, 2), Card(12, 2)]
     learn(10000, cards, 3, node_map, action_map)
-    exploit = exploitability(cards, 3, node_map, action_map)
-    print(exploit)
 
     for player in node_map:
         print(f"Player {player}")

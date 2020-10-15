@@ -1,4 +1,4 @@
-# MCCFR and CFR for Kuhn Poker 
+# MCCFR and CFR for Kuhn Poker and Leduc Poker 
 
 ## Kuhn Poker 
 
@@ -7,6 +7,9 @@
 The NE expected value for player 1 is -1/18
 
 Three player Kuhn Poker has a family of analytically found Nash Equilibriums, but it's not known if the family covers all Nash Equilibrium.
+
+## Leduc Poker
+[Leduc Poker](http://poker.cs.ualberta.ca/publications/UAI05.pdf) is a smaller variant of hold'em poker where each player is dealt one card. There consists of two betting roudns with max number of raises of 2 per round with raise size of 2 in the first round and 4 in the second round. After the first round, a community card is dealt and another round of betting ensues. Pairs beats high card.  
 
 ## CFR and MCCFR
 
@@ -20,10 +23,13 @@ MCCFR is a variant of CFR where instead of traversing the whole game tree, we wi
 
 ## How To Use 
 
-`python vanilla.py [number of players]`
+`python [vanilla.py|montey.py]` 
+to run the CFR/MCCFR variant
 
-where default is 2
+`python search.py` to play a game of Leduc. 
 
 CFR converges in around ~10,000 iterations.
 
 MCCFR can converge in around ~10,000, but is more stable around ~20,000 iterations.
+
+For Leduc, you need aorund 50,000 iterations. 
